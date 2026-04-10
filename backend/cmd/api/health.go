@@ -8,19 +8,15 @@ import (
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		response.JSON(w, http.StatusMethodNotAllowed, map[string]string{
-			"error": "method not allowed",
-		})
+		response.MethodNotAllowed(w)
 		return
 	}
 
-	response.JSON(w, http.StatusOK, map[string]string{
-		"status": "ok",
+	response.JSON(w, http.StatusOK, response.HealthResponse{
+		Status: "ok",
 	})
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
-	response.JSON(w, http.StatusNotFound, map[string]string{
-		"error": "not found",
-	})
+	response.NotFound(w)
 }
