@@ -11,15 +11,17 @@ import (
 	"syscall"
 	"time"
 
-	"taskflow/backend/internal/auth"
 	"taskflow/backend/internal/config"
 	"taskflow/backend/internal/db"
-	"taskflow/backend/internal/projects"
-	"taskflow/backend/internal/tasks"
-	"taskflow/backend/internal/users"
 )
 
 const shutdownTimeout = 10 * time.Second
+
+const (
+	startupTimeout   = 60 * time.Second
+	startupAttempts  = 15
+	startupRetryWait = 2 * time.Second
+)
 
 func main() {
 	cfg, err := config.Load()
@@ -28,24 +30,21 @@ func main() {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	dbConn, err := db.New(context.Background(), cfg.DatabaseURL)
+	startupCtx, cancelStartup := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancelStartup()
+
+	logger.Info("running database migrations")
+	if err := db.RunMigrationsWithRetry(startupCtx, cfg.DatabaseURL, startupAttempts, startupRetryWait); err != nil {
+		log.Fatalf("run database migrations: %v", err)
+	}
+
+	dbConn, err := db.NewWithRetry(startupCtx, cfg.DatabaseURL, startupAttempts, startupRetryWait)
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
 	}
 	defer dbConn.Close()
 
-	usersRepo := users.NewRepository(dbConn.Querier())
-	projectsRepo := projects.NewRepository(dbConn.Querier())
-	tasksRepo := tasks.NewRepository(dbConn.Querier())
-	authService := auth.NewService(usersRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptCost)
-	projectsService := projects.NewService(projectsRepo, tasksRepo)
-	tasksService := tasks.NewService(tasksRepo, projectsRepo, usersRepo)
-	app := &application{
-		logger:          logger,
-		authService:     authService,
-		projectsService: projectsService,
-		tasksService:    tasksService,
-	}
+	app := newApplication(logger, cfg, dbConn)
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.AppPort),
@@ -59,6 +58,7 @@ func main() {
 		slog.Int("jwt_expiry_hours", cfg.JWTExpiryHours),
 		slog.Int("bcrypt_cost", cfg.BcryptCost),
 		slog.String("database", "connected"),
+		slog.String("migrations", "applied"),
 	)
 
 	go func() {

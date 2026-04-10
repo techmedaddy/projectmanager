@@ -1,1 +1,4 @@
 Instructions.md
+.env
+backend/.env
+postgres-data
