@@ -39,10 +39,12 @@ func main() {
 	tasksRepo := tasks.NewRepository(dbConn.Querier())
 	authService := auth.NewService(usersRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptCost)
 	projectsService := projects.NewService(projectsRepo, tasksRepo)
+	tasksService := tasks.NewService(tasksRepo, projectsRepo, usersRepo)
 	app := &application{
 		logger:          logger,
 		authService:     authService,
 		projectsService: projectsService,
+		tasksService:    tasksService,
 	}
 
 	server := &http.Server{

@@ -78,6 +78,22 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Project, error) {
 	return project, nil
 }
 
+// GetOwnerID returns the owning user id for a project.
+func (r *Repository) GetOwnerID(ctx context.Context, id string) (string, error) {
+	const query = `
+		SELECT owner_id::text
+		FROM projects
+		WHERE id = $1
+	`
+
+	var ownerID string
+	if err := r.q.QueryRow(ctx, query, id).Scan(&ownerID); err != nil {
+		return "", fmt.Errorf("get project owner id: %w", err)
+	}
+
+	return ownerID, nil
+}
+
 // ListAccessibleByUser returns projects the user owns or has assigned tasks in.
 func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([]Project, error) {
 	const query = `
