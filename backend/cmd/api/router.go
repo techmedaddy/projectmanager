@@ -1,18 +1,20 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 )
 
-func newRouter(logger *slog.Logger) http.Handler {
+func newRouter(app *application) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/auth/register", app.registerHandler)
+	mux.HandleFunc("/auth/login", app.loginHandler)
 	mux.HandleFunc("/", notFoundHandler)
 
 	return chain(
 		mux,
-		requestLoggerMiddleware(logger),
+		requestIDMiddleware,
+		requestLoggerMiddleware(app.logger),
 		jsonMiddleware,
 	)
 }

@@ -11,8 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"taskflow/backend/internal/auth"
 	"taskflow/backend/internal/config"
 	"taskflow/backend/internal/db"
+	"taskflow/backend/internal/users"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -30,9 +32,16 @@ func main() {
 	}
 	defer dbConn.Close()
 
+	usersRepo := users.NewRepository(dbConn.Querier())
+	authService := auth.NewService(usersRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptCost)
+	app := &application{
+		logger:      logger,
+		authService: authService,
+	}
+
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.AppPort),
-		Handler:           newRouter(logger),
+		Handler:           newRouter(app),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
