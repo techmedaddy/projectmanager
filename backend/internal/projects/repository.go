@@ -2,8 +2,11 @@ package projects
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"taskflow/backend/internal/db"
 )
@@ -75,8 +78,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Project, error) {
 	return project, nil
 }
 
-// ListAccessibleByUser returns projects the user owns or participates in via
-// assigned or created tasks.
+// ListAccessibleByUser returns projects the user owns or has assigned tasks in.
 func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([]Project, error) {
 	const query = `
 		SELECT DISTINCT p.id::text, p.name, p.description, p.owner_id::text, p.created_at
@@ -84,7 +86,6 @@ func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([
 		LEFT JOIN tasks t ON t.project_id = p.id
 		WHERE p.owner_id = $1
 		   OR t.assignee_id = $1
-		   OR t.creator_id = $1
 		ORDER BY p.created_at DESC
 	`
 
@@ -108,6 +109,29 @@ func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([
 	}
 
 	return projects, nil
+}
+
+// HasAssignedTask reports whether the user has at least one task assigned in
+// the project.
+func (r *Repository) HasAssignedTask(ctx context.Context, projectID, userID string) (bool, error) {
+	const query = `
+		SELECT 1
+		FROM tasks
+		WHERE project_id = $1
+		  AND assignee_id = $2
+		LIMIT 1
+	`
+
+	var exists int
+	err := r.q.QueryRow(ctx, query, projectID, userID).Scan(&exists)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		return false, nil
+	default:
+		return false, fmt.Errorf("check assigned task access: %w", err)
+	}
 }
 
 // Update persists a full project update and returns the stored row.

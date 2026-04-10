@@ -14,6 +14,8 @@ import (
 	"taskflow/backend/internal/auth"
 	"taskflow/backend/internal/config"
 	"taskflow/backend/internal/db"
+	"taskflow/backend/internal/projects"
+	"taskflow/backend/internal/tasks"
 	"taskflow/backend/internal/users"
 )
 
@@ -33,10 +35,14 @@ func main() {
 	defer dbConn.Close()
 
 	usersRepo := users.NewRepository(dbConn.Querier())
+	projectsRepo := projects.NewRepository(dbConn.Querier())
+	tasksRepo := tasks.NewRepository(dbConn.Querier())
 	authService := auth.NewService(usersRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptCost)
+	projectsService := projects.NewService(projectsRepo, tasksRepo)
 	app := &application{
-		logger:      logger,
-		authService: authService,
+		logger:          logger,
+		authService:     authService,
+		projectsService: projectsService,
 	}
 
 	server := &http.Server{
