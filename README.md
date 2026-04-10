@@ -1,14 +1,491 @@
-# TaskFlow
+# projectmanager
 
-## Running With Docker
+TaskFlow is a small task management backend built for the take-home assignment in [Instructions.md](/home/techmedaddy/projects/projectmanager/Instructions.md). The current implementation covers the Go API, PostgreSQL schema, Docker startup flow, JWT authentication, project and task management, and integration tests.
+
+## Overview
+
+### Tech stack
+
+- Go 1.22
+- PostgreSQL 16
+- `pgx` for database access
+- `golang-migrate` with embedded SQL migrations
+- JWT for auth
+- `bcrypt` for password hashing
+- Docker Compose for local setup
+
+### What the backend does
+
+- Registers and authenticates users
+- Creates and lists projects
+- Returns project detail with tasks
+- Creates, updates, filters, and deletes tasks
+- Enforces `401` vs `403` correctly
+- Starts through Docker with automatic migrations
+
+## Architecture Decisions
+
+### Why this structure
+
+- `cmd/api` contains HTTP bootstrap and handlers.
+- `internal/auth`, `internal/projects`, `internal/tasks`, and `internal/users` hold domain logic.
+- `internal/db` contains PostgreSQL connection management, nullable helpers, transactions, pagination scaffolding, and migration startup.
+- `migrations` and `seed` keep schema and test data explicit and reviewable.
+
+### Key choices
+
+- Hand-written SQL instead of an ORM: this keeps queries visible, predictable, and easy to reason about during review.
+- Standard library `http.ServeMux`: enough for the assignment, lightweight, and easy to follow.
+- Embedded migrations: the API binary can apply SQL migrations automatically at container startup.
+- Service layer for permissions: project and task authorization rules live in business logic instead of being spread through handlers.
+- Explicit PATCH nullability handling for tasks: this avoids confusing “field omitted” with “field set to null”.
+
+### Tradeoffs
+
+- I chose clarity over abstraction, so there is some repetition across handlers and DTOs.
+- Seed data is documented and explicit, but not applied automatically on startup.
+- Pagination helpers exist, but list endpoints currently return full result sets because assignment scale is small.
+
+## Running Locally
+
+### Docker
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-The API will be available at `http://localhost:8080`, PostgreSQL at `localhost:5432`, and database migrations run automatically when the API container starts.
+Services:
 
-## Local Backend Env
+- API: `http://localhost:8080`
+- PostgreSQL: `localhost:5432`
 
-For running the backend outside Docker, copy `backend/.env.example` to `backend/.env` and adjust `DATABASE_URL` as needed.
+Health check:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+### Local backend only
+
+If you want to run the API outside Docker:
+
+```bash
+cp backend/.env.example backend/.env
+cd backend
+go run ./cmd/api
+```
+
+That assumes PostgreSQL is already running and `DATABASE_URL` points to it.
+
+## Environment Variables
+
+### Root `.env` for Docker Compose
+
+Copy [`.env.example`](/home/techmedaddy/projects/projectmanager/.env.example) to `.env`.
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `POSTGRES_DB` | Compose database name | `taskflow` |
+| `POSTGRES_USER` | Compose database user | `postgres` |
+| `POSTGRES_PASSWORD` | Compose database password | `postgres` |
+| `POSTGRES_PORT` | Host port mapped to PostgreSQL | `5432` |
+| `APP_PORT` | Host port mapped to the API | `8080` |
+| `JWT_SECRET` | JWT signing secret | `change-this-secret-before-production` |
+| `JWT_EXPIRY_HOURS` | Token lifetime in hours | `24` |
+| `BCRYPT_COST` | Password hashing cost | `12` |
+
+### Backend env for local Go execution
+
+Copy [`backend/.env.example`](/home/techmedaddy/projects/projectmanager/backend/.env.example) to `backend/.env`.
+
+| Variable | Purpose |
+|---|---|
+| `APP_PORT` | HTTP server port |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | JWT signing secret |
+| `JWT_EXPIRY_HOURS` | Token lifetime in hours |
+| `BCRYPT_COST` | Password hashing cost |
+| `TEST_DATABASE_URL` | Dedicated database used by integration tests |
+
+## Migration Strategy
+
+- Schema changes live in [`backend/migrations`](/home/techmedaddy/projects/projectmanager/backend/migrations).
+- Migrations are plain SQL with both `up` and `down` files.
+- The API embeds those SQL files into the binary and runs pending migrations automatically on startup.
+- In Docker, `docker compose up --build` is enough to apply migrations.
+
+Relevant files:
+
+- [`backend/migrations/0001_init_schema.up.sql`](/home/techmedaddy/projects/projectmanager/backend/migrations/0001_init_schema.up.sql)
+- [`backend/migrations/0001_init_schema.down.sql`](/home/techmedaddy/projects/projectmanager/backend/migrations/0001_init_schema.down.sql)
+- [`backend/internal/db/migrate.go`](/home/techmedaddy/projects/projectmanager/backend/internal/db/migrate.go)
+
+## Seed Data
+
+Seed SQL lives in [`backend/seed/001_seed.sql`](/home/techmedaddy/projects/projectmanager/backend/seed/001_seed.sql).
+
+Known seed credentials:
+
+- Email: `test@example.com`
+- Password: `password123`
+
+Seed the running Docker database with:
+
+```bash
+cat backend/seed/001_seed.sql | docker compose exec -T postgres psql -U postgres -d taskflow
+```
+
+If you are running PostgreSQL locally outside Docker:
+
+```bash
+psql "$DATABASE_URL" -f backend/seed/001_seed.sql
+```
+
+## API Reference
+
+All responses use `Content-Type: application/json`.
+
+Non-auth endpoints require:
+
+```http
+Authorization: Bearer <token>
+```
+
+### Error format
+
+Validation errors:
+
+```json
+{
+  "error": "validation failed",
+  "fields": {
+    "email": "is required"
+  }
+}
+```
+
+Other common errors:
+
+```json
+{"error":"unauthenticated"}
+{"error":"forbidden"}
+{"error":"not found"}
+{"error":"internal server error"}
+```
+
+### Auth
+
+#### `POST /auth/register`
+
+Request:
+
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "password123"
+}
+```
+
+Response `201 Created`:
+
+```json
+{
+  "user": {
+    "id": "c3a4c8f1-9c46-47d8-b2a1-f7418e3d95d1",
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "created_at": "2026-04-10T15:11:09Z"
+  }
+}
+```
+
+#### `POST /auth/login`
+
+Request:
+
+```json
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+```
+
+Response `200 OK`:
+
+```json
+{
+  "access_token": "<jwt>"
+}
+```
+
+JWT claims include:
+
+- `user_id`
+- `email`
+- `exp` with a 24-hour lifetime
+
+#### `GET /auth/me`
+
+Response `200 OK`:
+
+```json
+{
+  "user": {
+    "id": "c3a4c8f1-9c46-47d8-b2a1-f7418e3d95d1",
+    "name": "Jane Doe",
+    "email": "jane@example.com"
+  }
+}
+```
+
+### Projects
+
+#### `GET /projects`
+
+Returns projects the current user owns or currently has assigned tasks in.
+
+Response `200 OK`:
+
+```json
+{
+  "projects": [
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "TaskFlow Launch",
+      "description": "Seed project used for local development and assignment review.",
+      "owner_id": "11111111-1111-1111-1111-111111111111",
+      "created_at": "2026-04-10T15:11:09Z"
+    }
+  ]
+}
+```
+
+#### `POST /projects`
+
+Request:
+
+```json
+{
+  "name": "New Project",
+  "description": "API-delivered project"
+}
+```
+
+Response `201 Created`:
+
+```json
+{
+  "id": "9a7b4aa8-a048-4b1d-9bc0-6ec4ea9513c6",
+  "name": "New Project",
+  "description": "API-delivered project",
+  "owner_id": "11111111-1111-1111-1111-111111111111",
+  "created_at": "2026-04-10T16:00:00Z"
+}
+```
+
+#### `GET /projects/:id`
+
+Returns project detail plus its tasks.
+
+Response `200 OK`:
+
+```json
+{
+  "project": {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "name": "TaskFlow Launch",
+    "description": "Seed project used for local development and assignment review.",
+    "owner_id": "11111111-1111-1111-1111-111111111111",
+    "created_at": "2026-04-10T15:11:09Z"
+  },
+  "tasks": [
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "title": "Set up API foundation",
+      "description": "Create the initial backend scaffold and configuration loading.",
+      "status": "todo",
+      "priority": "high",
+      "project_id": "22222222-2222-2222-2222-222222222222",
+      "assignee_id": "11111111-1111-1111-1111-111111111111",
+      "creator_id": "11111111-1111-1111-1111-111111111111",
+      "due_date": "2026-04-15",
+      "created_at": "2026-04-10T15:11:09Z",
+      "updated_at": "2026-04-10T15:11:09Z"
+    }
+  ]
+}
+```
+
+#### `PATCH /projects/:id`
+
+Owner only.
+
+Request:
+
+```json
+{
+  "name": "Renamed Project",
+  "description": "Updated description"
+}
+```
+
+Response `200 OK`: same shape as `POST /projects`.
+
+#### `DELETE /projects/:id`
+
+Owner only.
+
+Response `204 No Content`
+
+### Tasks
+
+#### `GET /projects/:id/tasks`
+
+Supports:
+
+- `?status=todo|in_progress|done`
+- `?assignee=<user-uuid>`
+
+Response `200 OK`:
+
+```json
+{
+  "tasks": [
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "title": "Set up API foundation",
+      "description": "Create the initial backend scaffold and configuration loading.",
+      "status": "todo",
+      "priority": "high",
+      "project_id": "22222222-2222-2222-2222-222222222222",
+      "assignee_id": "11111111-1111-1111-1111-111111111111",
+      "creator_id": "11111111-1111-1111-1111-111111111111",
+      "due_date": "2026-04-15",
+      "created_at": "2026-04-10T15:11:09Z",
+      "updated_at": "2026-04-10T15:11:09Z"
+    }
+  ]
+}
+```
+
+#### `POST /projects/:id/tasks`
+
+Request:
+
+```json
+{
+  "title": "Integration Task",
+  "description": "Created through the API",
+  "status": "in_progress",
+  "priority": "high",
+  "assignee_id": "11111111-1111-1111-1111-111111111111",
+  "due_date": "2026-04-25"
+}
+```
+
+Response `201 Created`:
+
+```json
+{
+  "id": "0fbf9d77-9490-4f53-b1d0-c2966a7c6492",
+  "title": "Integration Task",
+  "description": "Created through the API",
+  "status": "in_progress",
+  "priority": "high",
+  "project_id": "22222222-2222-2222-2222-222222222222",
+  "assignee_id": "11111111-1111-1111-1111-111111111111",
+  "creator_id": "11111111-1111-1111-1111-111111111111",
+  "due_date": "2026-04-25",
+  "created_at": "2026-04-10T16:10:00Z",
+  "updated_at": "2026-04-10T16:10:00Z"
+}
+```
+
+#### `PATCH /tasks/:id`
+
+Allowed fields:
+
+- `title`
+- `description`
+- `status`
+- `priority`
+- `assignee_id`
+- `due_date`
+
+Nullable fields can be cleared by sending `null`.
+
+Request:
+
+```json
+{
+  "status": "done",
+  "assignee_id": null,
+  "due_date": null
+}
+```
+
+Response `200 OK`: same shape as `POST /projects/:id/tasks`.
+
+#### `DELETE /tasks/:id`
+
+Allowed for the project owner or the task creator.
+
+Response `204 No Content`
+
+## Authorization Rules
+
+Project visibility rules:
+
+- project owners can list, read, update, and delete their own projects
+- non-owners can list and read a project only when they currently have at least one assigned task in that project
+- non-owners cannot update or delete projects
+
+Task rules:
+
+- listing and creating tasks requires access to the parent project
+- updating a task requires project visibility plus task-level permission
+- deleting a task is allowed only for the project owner or the task creator
+
+This keeps `401` reserved for missing or invalid authentication, while `403` is used for authenticated users attempting an action they are not allowed to perform.
+
+## Testing
+
+Integration tests live in [integration_test.go](/home/techmedaddy/projects/projectmanager/backend/cmd/api/integration_test.go).
+
+Current coverage includes:
+
+- register/login flow
+- protected route rejects missing token
+- create task in project
+- delete task authorization
+
+Run tests with a dedicated database:
+
+```bash
+cd backend
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/taskflow_test?sslmode=disable go test ./cmd/api -v
+```
+
+The test harness:
+
+- applies migrations before tests
+- truncates tables between tests
+- reseeds known data before each test
+
+## What I’d Do With More Time
+
+- Add automatic seed loading in Docker for reviewer convenience.
+- Add an OpenAPI spec or Bruno/Postman collection.
+- Add pagination to `GET /projects` and `GET /projects/:id/tasks`.
+- Add the bonus `GET /projects/:id/stats` endpoint.
+- Add CI that runs formatting, build, and integration tests in containers.
+- Add stronger observability around startup, DB retries, and auth failures.
+- Build the React frontend and document the full-stack flow in the same README.
