@@ -240,7 +240,20 @@ func (s *Service) authorizeTaskUpdate(ctx context.Context, taskID, userID string
 		return Task{}, err
 	}
 
-	if ownerID == userID || task.CreatorID == userID {
+	if ownerID == userID {
+		return task, nil
+	}
+
+	hasProjectAccess, err := s.projectsRepo.HasAssignedTask(ctx, task.ProjectID, userID)
+	if err != nil {
+		return Task{}, fmt.Errorf("check task project access: %w", err)
+	}
+
+	if !hasProjectAccess {
+		return Task{}, ErrTaskProjectForbidden
+	}
+
+	if task.CreatorID == userID {
 		return task, nil
 	}
 

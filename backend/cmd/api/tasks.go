@@ -46,9 +46,8 @@ func (app *application) taskByIDHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *application) listTasksHandler(w http.ResponseWriter, r *http.Request, projectID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -70,9 +69,8 @@ func (app *application) listTasksHandler(w http.ResponseWriter, r *http.Request,
 }
 
 func (app *application) createTaskHandler(w http.ResponseWriter, r *http.Request, projectID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -98,9 +96,8 @@ func (app *application) createTaskHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) updateTaskHandler(w http.ResponseWriter, r *http.Request, taskID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -126,9 +123,8 @@ func (app *application) updateTaskHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) deleteTaskHandler(w http.ResponseWriter, r *http.Request, taskID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 

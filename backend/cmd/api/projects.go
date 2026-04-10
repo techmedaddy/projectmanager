@@ -45,9 +45,8 @@ func (app *application) projectByIDHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) listProjectsHandler(w http.ResponseWriter, r *http.Request) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -64,9 +63,8 @@ func (app *application) listProjectsHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *application) createProjectHandler(w http.ResponseWriter, r *http.Request) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -98,9 +96,8 @@ func (app *application) createProjectHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *application) getProjectHandler(w http.ResponseWriter, r *http.Request, projectID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -117,9 +114,8 @@ func (app *application) getProjectHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) updateProjectHandler(w http.ResponseWriter, r *http.Request, projectID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
@@ -150,9 +146,8 @@ func (app *application) updateProjectHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *application) deleteProjectHandler(w http.ResponseWriter, r *http.Request, projectID string) {
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 

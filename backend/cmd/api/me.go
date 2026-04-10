@@ -13,9 +13,8 @@ func (app *application) meHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	currentUser, ok := currentUserOr401(w, r)
 	if !ok {
-		response.Unauthenticated(w)
 		return
 	}
 
