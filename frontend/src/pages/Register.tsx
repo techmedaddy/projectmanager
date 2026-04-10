@@ -67,7 +67,7 @@ export function Register() {
             <CheckCircle2 className="w-6 h-6 text-orange-600" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Create an account</h1>
-          <p className="text-stone-500 mt-2">Get started with TaskFlow today.</p>
+          <p className="text-stone-500 mt-2">Get started with projectmanager today.</p>
         </div>
 
         <Card className="border-stone-200 shadow-sm">

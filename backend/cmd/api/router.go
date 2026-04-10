@@ -20,6 +20,7 @@ func newRouter(app *application) http.Handler {
 		mux,
 		requestIDMiddleware,
 		requestLoggerMiddleware(app.logger),
+		corsMiddleware,
 		jsonMiddleware,
 	)
 }
