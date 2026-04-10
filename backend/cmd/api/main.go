@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"taskflow/backend/internal/config"
+	"taskflow/backend/internal/db"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -23,6 +24,12 @@ func main() {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	dbConn, err := db.New(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("connect database: %v", err)
+	}
+	defer dbConn.Close()
+
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.AppPort),
 		Handler:           newRouter(logger),
@@ -34,6 +41,7 @@ func main() {
 		slog.Int("port", cfg.AppPort),
 		slog.Int("jwt_expiry_hours", cfg.JWTExpiryHours),
 		slog.Int("bcrypt_cost", cfg.BcryptCost),
+		slog.String("database", "connected"),
 	)
 
 	go func() {
