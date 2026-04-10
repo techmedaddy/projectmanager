@@ -78,3 +78,26 @@ func (d *Database) Begin(ctx context.Context) (pgx.Tx, error) {
 
 	return d.pool.Begin(ctx)
 }
+
+// WithTransaction runs fn inside a database transaction and commits only when
+// fn returns nil.
+func (d *Database) WithTransaction(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	tx, err := d.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	if err := fn(tx); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"taskflow/backend/internal/db"
 )
 
@@ -52,7 +50,7 @@ func (r *Repository) Create(ctx context.Context, params CreateParams) (Project, 
 	`
 
 	project, err := scanProject(
-		r.q.QueryRow(ctx, query, params.Name, params.Description, params.OwnerID),
+		r.q.QueryRow(ctx, query, params.Name, db.TextValue(params.Description), params.OwnerID),
 	)
 	if err != nil {
 		return Project{}, fmt.Errorf("create project: %w", err)
@@ -122,7 +120,7 @@ func (r *Repository) Update(ctx context.Context, params UpdateParams) (Project, 
 		RETURNING id::text, name, description, owner_id::text, created_at
 	`
 
-	project, err := scanProject(r.q.QueryRow(ctx, query, params.ID, params.Name, params.Description))
+	project, err := scanProject(r.q.QueryRow(ctx, query, params.ID, params.Name, db.TextValue(params.Description)))
 	if err != nil {
 		return Project{}, fmt.Errorf("update project: %w", err)
 	}
@@ -148,7 +146,7 @@ type projectScanner interface {
 func scanProject(scanner projectScanner) (Project, error) {
 	var (
 		project     Project
-		description pgtype.Text
+		description = db.TextValue(nil)
 	)
 
 	err := scanner.Scan(
@@ -162,9 +160,7 @@ func scanProject(scanner projectScanner) (Project, error) {
 		return Project{}, err
 	}
 
-	if description.Valid {
-		project.Description = &description.String
-	}
+	project.Description = db.TextPointer(description)
 
 	return project, nil
 }

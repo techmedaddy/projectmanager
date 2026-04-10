@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"taskflow/backend/internal/db"
 )
 
@@ -116,13 +114,13 @@ func (r *Repository) Create(ctx context.Context, params CreateParams) (Task, err
 			ctx,
 			query,
 			params.Title,
-			params.Description,
+			db.TextValue(params.Description),
 			params.Status,
 			params.Priority,
 			params.ProjectID,
-			params.AssigneeID,
+			db.TextValue(params.AssigneeID),
 			params.CreatorID,
-			params.DueDate,
+			db.DateValue(params.DueDate),
 		),
 	)
 	if err != nil {
@@ -248,11 +246,11 @@ func (r *Repository) Update(ctx context.Context, params UpdateParams) (Task, err
 			query,
 			params.ID,
 			params.Title,
-			params.Description,
+			db.TextValue(params.Description),
 			params.Status,
 			params.Priority,
-			params.AssigneeID,
-			params.DueDate,
+			db.TextValue(params.AssigneeID),
+			db.DateValue(params.DueDate),
 		),
 	)
 	if err != nil {
@@ -280,11 +278,11 @@ type taskScanner interface {
 func scanTask(scanner taskScanner) (Task, error) {
 	var (
 		task        Task
-		description pgtype.Text
+		description = db.TextValue(nil)
 		status      string
 		priority    string
-		assigneeID  pgtype.Text
-		dueDate     pgtype.Date
+		assigneeID  = db.TextValue(nil)
+		dueDate     = db.DateValue(nil)
 	)
 
 	err := scanner.Scan(
@@ -306,19 +304,9 @@ func scanTask(scanner taskScanner) (Task, error) {
 
 	task.Status = Status(status)
 	task.Priority = Priority(priority)
-
-	if description.Valid {
-		task.Description = &description.String
-	}
-
-	if assigneeID.Valid {
-		task.AssigneeID = &assigneeID.String
-	}
-
-	if dueDate.Valid {
-		parsedDate := dueDate.Time
-		task.DueDate = &parsedDate
-	}
+	task.Description = db.TextPointer(description)
+	task.AssigneeID = db.TextPointer(assigneeID)
+	task.DueDate = db.DatePointer(dueDate)
 
 	return task, nil
 }
