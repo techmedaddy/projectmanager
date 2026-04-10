@@ -9,6 +9,7 @@ func newRouter(app *application) http.Handler {
 	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/auth/register", app.registerHandler)
 	mux.HandleFunc("/auth/login", app.loginHandler)
+	mux.Handle("/auth/me", app.requireAuth(http.HandlerFunc(app.meHandler)))
 	mux.HandleFunc("/", notFoundHandler)
 
 	return chain(

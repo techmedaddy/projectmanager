@@ -24,3 +24,9 @@ type LoginRequest struct {
 type LoginResponse struct {
 	AccessToken string `json:"access_token"`
 }
+
+// CurrentUserResponse is the response body for a successful authenticated user
+// lookup.
+type CurrentUserResponse struct {
+	User CurrentUser `json:"user"`
+}
