@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"taskflow/backend/internal/auth"
 	"taskflow/backend/internal/projects"
 	"taskflow/backend/internal/response"
 	"taskflow/backend/internal/tasks"
