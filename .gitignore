@@ -2,3 +2,6 @@ Instructions.md
 .env
 backend/.env
 postgres-data
+ASSIGNMENT_GAP_CHECKLIST.md
+baseline-screenshots
+BASELINE_RUN_REPORT.md

@@ -18,7 +18,7 @@ export function AppLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-stone-900 hover:opacity-80 transition-opacity">
             <CheckCircle2 className="w-6 h-6 text-orange-600" />
-            <span className="font-semibold text-lg tracking-tight">TaskFlow</span>
+            <span className="font-semibold text-lg tracking-tight">projectmanager</span>
           </Link>
           
           <div className="flex items-center gap-4">
