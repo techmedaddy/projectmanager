@@ -173,6 +173,180 @@ func TestDeleteTaskAuthorization(t *testing.T) {
 	assertErrorMessage(t, resp, "forbidden")
 }
 
+func TestProjectsVisibilityWhenUserIsAssignee(t *testing.T) {
+	handler := setupIntegrationTest(t)
+	ownerToken := loginSeedUser(t, handler)
+	assigneeToken := registerAndLoginUser(
+		t,
+		handler,
+		"Assignee User",
+		"assignee-visibility@example.com",
+		secondUserPassword,
+	)
+
+	assigneeMe := performJSONRequest(t, handler, http.MethodGet, "/auth/me", nil, map[string]string{
+		"Authorization": "Bearer " + assigneeToken,
+	})
+	if assigneeMe.Code != http.StatusOK {
+		t.Fatalf("assignee me status = %d, body = %s", assigneeMe.Code, assigneeMe.Body.String())
+	}
+
+	var assigneeCurrent auth.CurrentUserResponse
+	decodeJSONBody(t, assigneeMe, &assigneeCurrent)
+	assigneeID := assigneeCurrent.User.ID
+
+	createdTaskResp := performJSONRequest(t, handler, http.MethodPost, "/projects/"+seedProjectID+"/tasks", tasks.CreateRequest{
+		Title:      "Visibility assignee task",
+		AssigneeID: ptrString(assigneeID),
+	}, map[string]string{
+		"Authorization": "Bearer " + ownerToken,
+	})
+	if createdTaskResp.Code != http.StatusCreated {
+		t.Fatalf("create task status = %d, body = %s", createdTaskResp.Code, createdTaskResp.Body.String())
+	}
+
+	listResp := performJSONRequest(t, handler, http.MethodGet, "/projects", nil, map[string]string{
+		"Authorization": "Bearer " + assigneeToken,
+	})
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list projects status = %d, body = %s", listResp.Code, listResp.Body.String())
+	}
+
+	var listBody struct {
+		Projects []struct {
+			ID string `json:"id"`
+		} `json:"projects"`
+	}
+	decodeJSONBody(t, listResp, &listBody)
+
+	if !containsProjectID(listBody.Projects, seedProjectID) {
+		t.Fatalf("expected project %s to be visible to assignee", seedProjectID)
+	}
+
+	detailResp := performJSONRequest(t, handler, http.MethodGet, "/projects/"+seedProjectID, nil, map[string]string{
+		"Authorization": "Bearer " + assigneeToken,
+	})
+	if detailResp.Code != http.StatusOK {
+		t.Fatalf("project detail status = %d, body = %s", detailResp.Code, detailResp.Body.String())
+	}
+}
+
+func TestProjectsVisibilityWhenUserIsCreatorButNotAssignee(t *testing.T) {
+	handler := setupIntegrationTest(t)
+	ownerToken := loginSeedUser(t, handler)
+	creatorToken := registerAndLoginUser(
+		t,
+		handler,
+		"Creator User",
+		"creator-visibility@example.com",
+		secondUserPassword,
+	)
+
+	creatorMe := performJSONRequest(t, handler, http.MethodGet, "/auth/me", nil, map[string]string{
+		"Authorization": "Bearer " + creatorToken,
+	})
+	if creatorMe.Code != http.StatusOK {
+		t.Fatalf("creator me status = %d, body = %s", creatorMe.Code, creatorMe.Body.String())
+	}
+
+	var creatorCurrent auth.CurrentUserResponse
+	decodeJSONBody(t, creatorMe, &creatorCurrent)
+	creatorID := creatorCurrent.User.ID
+
+	bootstrapResp := performJSONRequest(t, handler, http.MethodPost, "/projects/"+seedProjectID+"/tasks", tasks.CreateRequest{
+		Title:      "Bootstrap creator access",
+		AssigneeID: ptrString(creatorID),
+	}, map[string]string{
+		"Authorization": "Bearer " + ownerToken,
+	})
+	if bootstrapResp.Code != http.StatusCreated {
+		t.Fatalf("bootstrap task status = %d, body = %s", bootstrapResp.Code, bootstrapResp.Body.String())
+	}
+
+	var bootstrapTask tasks.Response
+	decodeJSONBody(t, bootstrapResp, &bootstrapTask)
+
+	creatorTaskResp := performJSONRequest(t, handler, http.MethodPost, "/projects/"+seedProjectID+"/tasks", tasks.CreateRequest{
+		Title:      "Creator-only task",
+		AssigneeID: ptrString(seedUserID),
+	}, map[string]string{
+		"Authorization": "Bearer " + creatorToken,
+	})
+	if creatorTaskResp.Code != http.StatusCreated {
+		t.Fatalf("creator task status = %d, body = %s", creatorTaskResp.Code, creatorTaskResp.Body.String())
+	}
+
+	deleteBootstrapResp := performJSONRequest(t, handler, http.MethodDelete, "/tasks/"+bootstrapTask.ID, nil, map[string]string{
+		"Authorization": "Bearer " + ownerToken,
+	})
+	if deleteBootstrapResp.Code != http.StatusNoContent {
+		t.Fatalf("delete bootstrap status = %d, body = %s", deleteBootstrapResp.Code, deleteBootstrapResp.Body.String())
+	}
+
+	listResp := performJSONRequest(t, handler, http.MethodGet, "/projects", nil, map[string]string{
+		"Authorization": "Bearer " + creatorToken,
+	})
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list projects status = %d, body = %s", listResp.Code, listResp.Body.String())
+	}
+
+	var listBody struct {
+		Projects []struct {
+			ID string `json:"id"`
+		} `json:"projects"`
+	}
+	decodeJSONBody(t, listResp, &listBody)
+
+	if !containsProjectID(listBody.Projects, seedProjectID) {
+		t.Fatalf("expected project %s to remain visible to creator", seedProjectID)
+	}
+
+	detailResp := performJSONRequest(t, handler, http.MethodGet, "/projects/"+seedProjectID, nil, map[string]string{
+		"Authorization": "Bearer " + creatorToken,
+	})
+	if detailResp.Code != http.StatusOK {
+		t.Fatalf("project detail status = %d, body = %s", detailResp.Code, detailResp.Body.String())
+	}
+}
+
+func TestProjectsVisibilityDeniedWhenUserIsNotOwnerCreatorOrAssignee(t *testing.T) {
+	handler := setupIntegrationTest(t)
+	outsiderToken := registerAndLoginUser(
+		t,
+		handler,
+		"Outsider User",
+		"outsider-visibility@example.com",
+		secondUserPassword,
+	)
+
+	listResp := performJSONRequest(t, handler, http.MethodGet, "/projects", nil, map[string]string{
+		"Authorization": "Bearer " + outsiderToken,
+	})
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list projects status = %d, body = %s", listResp.Code, listResp.Body.String())
+	}
+
+	var listBody struct {
+		Projects []struct {
+			ID string `json:"id"`
+		} `json:"projects"`
+	}
+	decodeJSONBody(t, listResp, &listBody)
+
+	if containsProjectID(listBody.Projects, seedProjectID) {
+		t.Fatalf("did not expect project %s to be visible to outsider", seedProjectID)
+	}
+
+	detailResp := performJSONRequest(t, handler, http.MethodGet, "/projects/"+seedProjectID, nil, map[string]string{
+		"Authorization": "Bearer " + outsiderToken,
+	})
+	if detailResp.Code != http.StatusForbidden {
+		t.Fatalf("project detail status = %d, want %d; body = %s", detailResp.Code, http.StatusForbidden, detailResp.Body.String())
+	}
+
+	assertErrorMessage(t, detailResp, "forbidden")
+}
+
 func setupIntegrationTest(t *testing.T) http.Handler {
 	t.Helper()
 
@@ -430,4 +604,16 @@ func ptrTaskStatus(value tasks.Status) *tasks.Status {
 
 func ptrTaskPriority(value tasks.Priority) *tasks.Priority {
 	return &value
+}
+
+func containsProjectID(projects []struct {
+	ID string `json:"id"`
+}, target string) bool {
+	for _, project := range projects {
+		if project.ID == target {
+			return true
+		}
+	}
+
+	return false
 }
