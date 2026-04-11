@@ -419,6 +419,14 @@ Response `200 OK`:
 
 ### Projects
 
+#### Pagination response contract
+
+List endpoints return:
+- `items`: current page data
+- `meta.page`: current page number
+- `meta.limit`: page size
+- `meta.total`: total matching rows across all pages
+
 #### `GET /projects`
 
 Returns projects the current user can access (project owner OR task creator OR task assignee).
@@ -568,6 +576,29 @@ Example:
 
 ```http
 GET /projects/22222222-2222-2222-2222-222222222222/tasks?status=todo&assignee=11111111-1111-1111-1111-111111111111&page=1&limit=5
+```
+
+#### Pagination query examples
+
+Projects:
+
+```http
+GET /projects?page=1&limit=6
+GET /projects?page=2&limit=6
+```
+
+Tasks without filters:
+
+```http
+GET /projects/22222222-2222-2222-2222-222222222222/tasks?page=1&limit=10
+GET /projects/22222222-2222-2222-2222-222222222222/tasks?page=2&limit=10
+```
+
+Tasks with filters preserved while paginating:
+
+```http
+GET /projects/22222222-2222-2222-2222-222222222222/tasks?status=done&assignee=11111111-1111-1111-1111-111111111111&page=1&limit=5
+GET /projects/22222222-2222-2222-2222-222222222222/tasks?status=done&assignee=11111111-1111-1111-1111-111111111111&page=2&limit=5
 ```
 
 Response `200 OK`:
