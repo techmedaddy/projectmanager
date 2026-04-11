@@ -60,17 +60,17 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-stone-100 flex items-center justify-center mb-6">
+          <div className="w-12 h-12 bg-white/95 rounded-2xl shadow-sm border border-stone-200 flex items-center justify-center mb-6">
             <CheckCircle2 className="w-6 h-6 text-orange-600" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Create an account</h1>
           <p className="text-stone-500 mt-2">Get started with projectmanager today.</p>
         </div>
 
-        <Card className="border-stone-200 shadow-sm">
+        <Card className="border-stone-200/80 bg-white/95 rounded-2xl shadow-lg shadow-stone-900/5">
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">

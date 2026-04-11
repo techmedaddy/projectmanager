@@ -153,27 +153,27 @@ export function ProjectDetail() {
 
   return (
     <div className="space-y-8 h-full flex flex-col">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <Link to="/projects" className="inline-flex items-center text-sm text-stone-500 hover:text-stone-900 mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Projects
           </Link>
-          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">{project.name}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-900 leading-tight">{project.name}</h1>
           {project.description && (
             <p className="text-stone-500 mt-2 max-w-2xl">{project.description}</p>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={handleOpenCreate} className="bg-stone-900 hover:bg-stone-800 text-white">
+          <Button onClick={handleOpenCreate} className="bg-stone-900 hover:bg-stone-800 text-white shadow-sm">
             <Plus className="w-4 h-4 mr-2" />
             Add Task
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-stone-200/80 bg-white/95 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Status totals</p>
           <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
             <div className="rounded-md bg-stone-50 p-2 text-center">
@@ -191,7 +191,7 @@ export function ProjectDetail() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
+        <div className="rounded-2xl border border-stone-200/80 bg-white/95 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Top assignees</p>
           <div className="mt-2 space-y-1 text-sm">
             {topAssignees.length === 0 ? (
@@ -208,7 +208,7 @@ export function ProjectDetail() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-stone-200/80 bg-white/95 p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           <label className="space-y-1">
             <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Status</span>
@@ -299,7 +299,7 @@ export function ProjectDetail() {
           <>
             <TaskBoard tasks={tasks} projectId={project.id} onTaskClick={handleOpenEdit} />
 
-            <div className="mt-4 flex items-center justify-between rounded-xl border border-stone-200 bg-white p-3">
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-stone-200/80 bg-white/95 p-3.5 shadow-sm">
               <p className="text-sm text-stone-500">
                 Page <span className="font-medium text-stone-700">{tasksMeta?.page ?? tasksPage}</span> · Total tasks{' '}
                 <span className="font-medium text-stone-700">{tasksMeta?.total ?? tasks.length}</span>

@@ -52,12 +52,17 @@ export function Projects() {
     },
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ProjectFormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
   });
 
-  const onSubmit = (data: ProjectFormValues) => {
-    createMutation.mutate(data);
+  const onSubmit = (formData: ProjectFormValues) => {
+    createMutation.mutate(formData);
   };
 
   if (isLoading) {
@@ -91,12 +96,11 @@ export function Projects() {
 
   const projects = data?.items ?? data?.projects ?? [];
   const meta = data?.meta;
-
   const totalPages = meta ? Math.max(1, Math.ceil(meta.total / meta.limit)) : 1;
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Projects</h1>
           <p className="text-stone-500 mt-1">Manage your workspaces and tasks.</p>
@@ -104,7 +108,7 @@ export function Projects() {
 
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-stone-900 hover:bg-stone-800 text-white">
+            <Button className="bg-stone-900 hover:bg-stone-800 text-white shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               New Project
             </Button>
@@ -148,7 +152,7 @@ export function Projects() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="text-center py-24 border border-dashed border-stone-200 rounded-2xl bg-white">
+        <div className="text-center py-24 border border-dashed border-stone-300 rounded-3xl bg-white/90">
           <FolderKanban className="w-12 h-12 text-stone-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-stone-900">No projects yet</h3>
           <p className="text-stone-500 mt-1 mb-6">Create your first project to start organizing tasks.</p>
@@ -162,7 +166,7 @@ export function Projects() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <Link key={project.id} to={`/projects/${project.id}`} className="block group">
-                <Card className="h-full border-stone-200 shadow-sm hover:shadow-md transition-all hover:border-stone-300 bg-white">
+                <Card className="h-full rounded-2xl border-stone-200/80 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-stone-300 bg-white/95">
                   <CardHeader>
                     <CardTitle className="text-lg group-hover:text-orange-600 transition-colors">
                       {project.name}
@@ -172,7 +176,7 @@ export function Projects() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center text-xs text-stone-400 mt-4">
+                    <div className="flex items-center text-xs text-stone-400 mt-4 border-t border-stone-100 pt-3">
                       <Calendar className="w-3.5 h-3.5 mr-1.5" />
                       Created {format(new Date(project.created_at), 'MMM d, yyyy')}
                     </div>
@@ -182,7 +186,7 @@ export function Projects() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white p-3">
+          <div className="flex items-center justify-between rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-sm">
             <p className="text-sm text-stone-500">
               Page <span className="font-medium text-stone-700">{meta?.page ?? page}</span> of{' '}
               <span className="font-medium text-stone-700">{totalPages}</span>
