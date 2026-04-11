@@ -68,7 +68,7 @@ export function Projects() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-300" />
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
       </div>
     );
   }
@@ -88,8 +88,8 @@ export function Projects() {
 
     return (
       <div className="text-center py-12">
-        <p className="text-rose-300">{message}</p>
-        {status && <p className="text-xs text-slate-400 mt-1">Error code: {status}</p>}
+        <p className="text-rose-600">{message}</p>
+        {status && <p className="text-xs text-slate-500 mt-1">Error code: {status}</p>}
       </div>
     );
   }
@@ -100,21 +100,21 @@ export function Projects() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-cyan-500/10 to-transparent p-6 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">Projects</h1>
-            <p className="text-slate-300 mt-1">Manage your workspaces and tasks.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Projects</h1>
+            <p className="text-slate-600 mt-1">Manage your workspaces and tasks.</p>
           </div>
 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-lg shadow-cyan-500/30">
+              <Button className="bg-slate-900 text-white hover:bg-slate-800 shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 New Project
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-slate-900 border-white/15 text-slate-100">
+            <DialogContent className="sm:max-w-[425px] bg-white border-slate-200 text-slate-900">
               <DialogHeader>
                 <DialogTitle>Create Project</DialogTitle>
               </DialogHeader>
@@ -127,7 +127,7 @@ export function Projects() {
                     {...register('name')}
                     className={errors.name ? 'border-rose-500' : ''}
                   />
-                  {errors.name && <p className="text-sm text-rose-400">{errors.name.message}</p>}
+                  {errors.name && <p className="text-sm text-rose-500">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description (Optional)</Label>
@@ -142,7 +142,7 @@ export function Projects() {
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">
+                  <Button type="submit" disabled={createMutation.isPending} className="bg-slate-900 text-white hover:bg-slate-800">
                     {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Create
                   </Button>
@@ -154,11 +154,11 @@ export function Projects() {
       </section>
 
       {projects.length === 0 ? (
-        <div className="text-center py-24 border border-dashed border-white/20 rounded-3xl bg-slate-900/40 backdrop-blur">
-          <FolderKanban className="w-12 h-12 text-cyan-300/70 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white">No projects yet</h3>
-          <p className="text-slate-300 mt-1 mb-6">Create your first project to start organizing tasks.</p>
-          <Button onClick={() => setIsCreateOpen(true)} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">
+        <div className="text-center py-24 border border-dashed border-slate-300 rounded-3xl bg-white">
+          <FolderKanban className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900">No projects yet</h3>
+          <p className="text-slate-600 mt-1 mb-6">Create your first project to start organizing tasks.</p>
+          <Button onClick={() => setIsCreateOpen(true)} className="bg-slate-900 text-white hover:bg-slate-800">
             <Plus className="w-4 h-4 mr-2" />
             Create Project
           </Button>
@@ -168,17 +168,17 @@ export function Projects() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <Link key={project.id} to={`/projects/${project.id}`} className="block group">
-                <Card className="h-full rounded-2xl border-white/10 bg-slate-900/55 backdrop-blur-sm shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-cyan-300/40">
+                <Card className="h-full rounded-2xl border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300">
                   <CardHeader>
-                    <CardTitle className="text-lg text-white group-hover:text-cyan-300 transition-colors">
+                    <CardTitle className="text-lg text-slate-900 group-hover:text-indigo-700 transition-colors">
                       {project.name}
                     </CardTitle>
-                    <CardDescription className="line-clamp-2 mt-2 text-slate-300">
+                    <CardDescription className="line-clamp-2 mt-2 text-slate-600">
                       {project.description || 'No description provided.'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center text-xs text-slate-400 mt-4 border-t border-white/10 pt-3">
+                    <div className="flex items-center text-xs text-slate-500 mt-4 border-t border-slate-100 pt-3">
                       <Calendar className="w-3.5 h-3.5 mr-1.5" />
                       Created {format(new Date(project.created_at), 'MMM d, yyyy')}
                     </div>
@@ -188,10 +188,10 @@ export function Projects() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/45 p-3.5 shadow-sm backdrop-blur-sm">
-            <p className="text-sm text-slate-300">
-              Page <span className="font-medium text-white">{meta?.page ?? page}</span> of{' '}
-              <span className="font-medium text-white">{totalPages}</span>
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+            <p className="text-sm text-slate-600">
+              Page <span className="font-medium text-slate-900">{meta?.page ?? page}</span> of{' '}
+              <span className="font-medium text-slate-900">{totalPages}</span>
               {isFetching ? ' · Updating…' : ''}
             </p>
             <div className="flex items-center gap-2">

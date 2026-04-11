@@ -93,10 +93,10 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-rose-500/20 text-rose-200 border-rose-300/30';
-      case 'medium': return 'bg-amber-500/20 text-amber-200 border-amber-300/30';
-      case 'low': return 'bg-emerald-500/20 text-emerald-200 border-emerald-300/30';
-      default: return 'bg-slate-500/20 text-slate-200 border-slate-300/30';
+      case 'high': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'medium': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'low': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      default: return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   };
 
@@ -107,17 +107,19 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
         const Icon = column.icon;
 
         return (
-          <div key={column.id} className="flex-1 min-w-[300px] rounded-2xl p-4 border border-white/10 bg-slate-900/45 backdrop-blur-sm">
+          <div key={column.id} className="flex-1 min-w-[300px] rounded-2xl p-4 border border-slate-200 bg-slate-50/70">
             <div className="flex items-center justify-between mb-4 px-1">
-              <div className="flex items-center gap-2 text-slate-100 font-medium">
-                <Icon className={cn("w-4 h-4", 
-                  column.id === 'todo' ? 'text-slate-400' : 
-                  column.id === 'in_progress' ? 'text-cyan-300' : 
-                  'text-emerald-300'
-                )} />
+              <div className="flex items-center gap-2 text-slate-800 font-medium">
+                <Icon className={cn(
+                  'w-4 h-4',
+                  column.id === 'todo' ? 'text-slate-400' :
+                    column.id === 'in_progress' ? 'text-indigo-500' :
+                      'text-emerald-500'
+                )}
+                />
                 {column.title}
               </div>
-              <Badge variant="secondary" className="bg-slate-700/60 text-slate-200 hover:bg-slate-700/60 border border-white/10">
+              <Badge variant="secondary" className="bg-slate-200/70 text-slate-700 hover:bg-slate-200/70 border border-slate-300/60">
                 {columnTasks.length}
               </Badge>
             </div>
@@ -127,55 +129,54 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                 <div
                   key={task.id}
                   onClick={() => onTaskClick(task)}
-                  className="bg-slate-800/70 p-4 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-cyan-300/30 transition-all cursor-pointer group"
+                  className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="font-medium text-slate-100 leading-tight">{task.title}</h4>
+                    <h4 className="font-medium text-slate-900 leading-tight">{task.title}</h4>
                   </div>
-                  
+
                   {task.description && (
-                    <p className="text-sm text-slate-300 line-clamp-2 mb-4">
+                    <p className="text-sm text-slate-600 line-clamp-2 mb-4">
                       {task.description}
                     </p>
                   )}
 
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={cn("capitalize text-[10px] px-1.5 py-0 h-5", getPriorityColor(task.priority))}>
+                      <Badge variant="outline" className={cn('capitalize text-[10px] px-1.5 py-0 h-5', getPriorityColor(task.priority))}>
                         {task.priority}
                       </Badge>
                       {task.due_date && (
-                        <div className="flex items-center text-xs text-slate-400">
+                        <div className="flex items-center text-xs text-slate-500">
                           <Calendar className="w-3 h-3 mr-1" />
                           {format(new Date(task.due_date), 'MMM d')}
                         </div>
                       )}
                     </div>
-                    
-                    {/* Quick status actions */}
+
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                       {column.id !== 'todo' && (
-                        <button 
+                        <button
                           onClick={(e) => handleStatusChange(e, task.id, 'todo')}
-                          className="p-1 text-slate-400 hover:text-slate-200 rounded hover:bg-white/10"
+                          className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100"
                           title="Move to To Do"
                         >
                           <Circle className="w-4 h-4" />
                         </button>
                       )}
                       {column.id !== 'in_progress' && (
-                        <button 
+                        <button
                           onClick={(e) => handleStatusChange(e, task.id, 'in_progress')}
-                          className="p-1 text-slate-400 hover:text-cyan-300 rounded hover:bg-cyan-500/10"
+                          className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50"
                           title="Move to In Progress"
                         >
                           <ArrowRightCircle className="w-4 h-4" />
                         </button>
                       )}
                       {column.id !== 'done' && (
-                        <button 
+                        <button
                           onClick={(e) => handleStatusChange(e, task.id, 'done')}
-                          className="p-1 text-slate-400 hover:text-emerald-300 rounded hover:bg-emerald-500/10"
+                          className="p-1 text-slate-400 hover:text-emerald-600 rounded hover:bg-emerald-50"
                           title="Move to Done"
                         >
                           <CheckCircle2 className="w-4 h-4" />
@@ -185,10 +186,10 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                   </div>
                 </div>
               ))}
-              
+
               {columnTasks.length === 0 && (
-                <div className="text-center py-8 border-2 border-dashed border-white/15 rounded-xl">
-                  <p className="text-sm text-slate-400">No tasks</p>
+                <div className="text-center py-8 border-2 border-dashed border-slate-300 rounded-xl bg-white/60">
+                  <p className="text-sm text-slate-500">No tasks</p>
                 </div>
               )}
             </div>
