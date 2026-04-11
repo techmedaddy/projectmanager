@@ -1,6 +1,6 @@
 # projectmanager
 
-TaskFlow is a small task management backend built for the take-home assignment in [Instructions.md](/home/techmedaddy/projects/projectmanager/Instructions.md). The current implementation covers the Go API, PostgreSQL schema, Docker startup flow, JWT authentication, project and task management, and integration tests.
+projectmanager is a full-stack project and task management platform with a Go API, PostgreSQL, and a React frontend. It supports authentication, project collaboration, task lifecycle management, and Docker-based local development.
 
 ## Overview
 
@@ -35,7 +35,7 @@ TaskFlow is a small task management backend built for the take-home assignment i
 ### Key choices
 
 - Hand-written SQL instead of an ORM: this keeps queries visible, predictable, and easy to reason about during review.
-- Standard library `http.ServeMux`: enough for the assignment, lightweight, and easy to follow.
+- Standard library `http.ServeMux`: lightweight and clear for this service size.
 - Embedded migrations: the API binary can apply SQL migrations automatically at container startup.
 - Service layer for permissions: project and task authorization rules live in business logic instead of being spread through handlers.
 - Explicit PATCH nullability handling for tasks: this avoids confusing “field omitted” with “field set to null”.
@@ -44,7 +44,91 @@ TaskFlow is a small task management backend built for the take-home assignment i
 
 - I chose clarity over abstraction, so there is some repetition across handlers and DTOs.
 - Seed data is documented and explicit, but not applied automatically on startup.
-- Pagination helpers exist, but list endpoints currently return full result sets because assignment scale is small.
+- Pagination helpers exist, but list endpoints currently return full result sets because typical local/demo datasets are small.
+
+## System Design
+
+### HLD (High-Level Design)
+
+```mermaid
+flowchart LR
+  U[Client Browser] --> FE[Frontend React App]
+  FE --> API[Go REST API]
+  API --> DB[(PostgreSQL)]
+  API --> MIG[Embedded SQL Migrations]
+```
+
+### Data Flow
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant API
+  participant DB
+
+  User->>Frontend: Login/Register
+  Frontend->>API: POST /auth/login or /auth/register
+  API->>DB: Validate / create user
+  DB-->>API: User data
+  API-->>Frontend: JWT / user response
+
+  User->>Frontend: Open project and apply filters
+  Frontend->>API: GET /projects/:id
+  Frontend->>API: GET /projects/:id/tasks?status=&assignee=
+  API->>DB: Permission + filtered task query
+  DB-->>API: Project/tasks rows
+  API-->>Frontend: JSON response
+```
+
+### LLD (Low-Level Design)
+
+```mermaid
+flowchart TD
+  Router[Router + Middleware] --> Handlers[HTTP Handlers]
+  Handlers --> Services[Domain Services]
+  Services --> Repos[Repositories]
+  Repos --> PG[(PostgreSQL)]
+  Handlers --> Resp[Response/Error Helpers]
+```
+
+```mermaid
+erDiagram
+  USERS ||--o{ PROJECTS : owns
+  PROJECTS ||--o{ TASKS : contains
+  USERS ||--o{ TASKS : creates
+  USERS ||--o{ TASKS : assigned
+
+  USERS {
+    uuid id PK
+    string name
+    string email
+    string password
+    timestamp created_at
+  }
+
+  PROJECTS {
+    uuid id PK
+    string name
+    string description
+    uuid owner_id FK
+    timestamp created_at
+  }
+
+  TASKS {
+    uuid id PK
+    string title
+    string description
+    string status
+    string priority
+    uuid project_id FK
+    uuid assignee_id FK
+    uuid creator_id FK
+    date due_date
+    timestamp created_at
+    timestamp updated_at
+  }
+```
 
 ## Running Locally
 
@@ -105,7 +189,7 @@ Copy [`.env.example`](/home/techmedaddy/projects/projectmanager/.env.example) to
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `POSTGRES_DB` | Compose database name | `taskflow` |
+| `POSTGRES_DB` | Compose database name | `projectmanager` |
 | `POSTGRES_USER` | Compose database user | `postgres` |
 | `POSTGRES_PASSWORD` | Compose database password | `postgres` |
 | `POSTGRES_PORT` | Host port mapped to PostgreSQL | `5432` |
@@ -161,7 +245,7 @@ Use these credentials after seeding:
 Seed command (Docker):
 
 ```bash
-cat backend/seed/001_seed.sql | docker compose exec -T postgres psql -U postgres -d taskflow
+cat backend/seed/001_seed.sql | docker compose exec -T postgres psql -U postgres -d projectmanager
 ```
 
 If you are running PostgreSQL locally outside Docker:
@@ -189,7 +273,7 @@ psql "$DATABASE_URL" -f backend/seed/001_seed.sql
 
 ### Auth persistence and protected routes
 
-- JWT is persisted in localStorage key `taskflow_token`.
+- JWT is persisted in browser localStorage for session continuity.
 - On app boot, auth context calls `GET /auth/me` when token exists.
 - Protected routes redirect unauthenticated users to `/login`.
 - Logout clears token and user state.
@@ -337,8 +421,8 @@ Response `200 OK`:
   "projects": [
     {
       "id": "22222222-2222-2222-2222-222222222222",
-      "name": "TaskFlow Launch",
-      "description": "Seed project used for local development and assignment review.",
+      "name": "projectmanager Launch",
+      "description": "Seed project used for local development and review.",
       "owner_id": "11111111-1111-1111-1111-111111111111",
       "created_at": "2026-04-10T15:11:09Z"
     }
@@ -379,8 +463,8 @@ Response `200 OK`:
 {
   "project": {
     "id": "22222222-2222-2222-2222-222222222222",
-    "name": "TaskFlow Launch",
-    "description": "Seed project used for local development and assignment review.",
+    "name": "projectmanager Launch",
+    "description": "Seed project used for local development and review.",
     "owner_id": "11111111-1111-1111-1111-111111111111",
     "created_at": "2026-04-10T15:11:09Z"
   },
@@ -549,7 +633,7 @@ Run tests with a dedicated database:
 
 ```bash
 cd backend
-TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/taskflow_test?sslmode=disable go test ./cmd/api -v
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/projectmanager_test?sslmode=disable go test ./cmd/api -v
 ```
 
 The test harness:
