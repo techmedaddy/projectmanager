@@ -24,6 +24,7 @@ type Config struct {
 	JWTSecret      string
 	JWTExpiryHours int
 	BcryptCost     int
+	AutoSeed       bool
 }
 
 // Load reads required environment variables and validates them for application
@@ -77,6 +78,13 @@ func Load() (Config, error) {
 		cfg.BcryptCost = bcryptCost
 	}
 
+	autoSeed, err := optionalBool("AUTO_SEED", true)
+	if err != nil {
+		validationErrs = append(validationErrs, err)
+	} else {
+		cfg.AutoSeed = autoSeed
+	}
+
 	if len(validationErrs) > 0 {
 		return Config{}, errors.Join(validationErrs...)
 	}
@@ -105,6 +113,20 @@ func requiredInt(key string) (int, error) {
 	}
 
 	return value, nil
+}
+
+func optionalBool(key string, defaultValue bool) (bool, error) {
+	rawValue, ok := os.LookupEnv(key)
+	if !ok || strings.TrimSpace(rawValue) == "" {
+		return defaultValue, nil
+	}
+
+	parsed, err := strconv.ParseBool(strings.TrimSpace(rawValue))
+	if err != nil {
+		return false, fmt.Errorf("%s must be a valid boolean", key)
+	}
+
+	return parsed, nil
 }
 
 func validateDatabaseURL(raw string) error {
