@@ -54,3 +54,8 @@ export interface TasksResponse {
 export interface AssigneesResponse {
   users: User[];
 }
+
+export interface ProjectStatsResponse {
+  by_status: Record<'todo' | 'in_progress' | 'done', number>;
+  by_assignee: Record<string, number>;
+}

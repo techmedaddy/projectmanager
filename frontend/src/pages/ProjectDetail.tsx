@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, fetchApi } from '../lib/api';
-import { ProjectDetailResponse, Task, TaskStatus, TasksResponse } from '../types';
+import { ProjectDetailResponse, ProjectStatsResponse, Task, TaskStatus, TasksResponse } from '../types';
 import { Button } from '../components/ui/button';
 import { Loader2, ArrowLeft, Plus } from 'lucide-react';
 import { TaskBoard } from '../components/tasks/TaskBoard';
@@ -49,6 +49,19 @@ export function ProjectDetail() {
     placeholderData: (previousData) => previousData,
   });
 
+  const { data: statsData } = useQuery<ProjectStatsResponse>({
+    queryKey: ['project-stats', id],
+    queryFn: () => fetchApi(`/projects/${id}/stats`),
+    enabled: !!id,
+  });
+
+  const {
+    data: assigneesData,
+  } = useQuery<{ users: { id: string; name: string; email: string }[] }>({
+    queryKey: ['project-assignees', id],
+    queryFn: () => fetchApi(`/projects/${id}/assignees`),
+    enabled: !!id,
+  });
   const allProjectTasks = projectData?.tasks ?? [];
   const tasks = tasksData?.tasks ?? [];
 
@@ -59,6 +72,23 @@ export function ProjectDetail() {
   }, [allProjectTasks]);
 
   const hasActiveFilters = statusFilter !== 'all' || assigneeFilter !== 'all';
+
+  const assigneeNameByID = useMemo(() => {
+    const map = new Map<string, string>();
+    (assigneesData?.users ?? []).forEach((user) => {
+      map.set(user.id, `${user.name} (${user.email})`);
+    });
+    return map;
+  }, [assigneesData]);
+
+  const topAssignees = useMemo(() => {
+    if (!statsData?.by_assignee) return [] as Array<{ key: string; count: number }>;
+
+    return Object.entries(statsData.by_assignee)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([key, count]) => ({ key, count }));
+  }, [statsData]);
 
   const handleOpenCreate = () => {
     setSelectedTask(undefined);
@@ -126,6 +156,42 @@ export function ProjectDetail() {
             <Plus className="w-4 h-4 mr-2" />
             Add Task
           </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Status totals</p>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+            <div className="rounded-md bg-stone-50 p-2 text-center">
+              <p className="text-stone-500">To Do</p>
+              <p className="font-semibold text-stone-800">{statsData?.by_status?.todo ?? 0}</p>
+            </div>
+            <div className="rounded-md bg-stone-50 p-2 text-center">
+              <p className="text-stone-500">In Progress</p>
+              <p className="font-semibold text-stone-800">{statsData?.by_status?.in_progress ?? 0}</p>
+            </div>
+            <div className="rounded-md bg-stone-50 p-2 text-center">
+              <p className="text-stone-500">Done</p>
+              <p className="font-semibold text-stone-800">{statsData?.by_status?.done ?? 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Top assignees</p>
+          <div className="mt-2 space-y-1 text-sm">
+            {topAssignees.length === 0 ? (
+              <p className="text-stone-500">No assignee activity yet.</p>
+            ) : (
+              topAssignees.map((item) => (
+                <div key={item.key} className="flex items-center justify-between rounded-md bg-stone-50 px-2 py-1">
+                  <span className="truncate text-stone-700">{item.key === 'unassigned' ? 'Unassigned' : (assigneeNameByID.get(item.key) ?? item.key)}</span>
+                  <span className="font-medium text-stone-800">{item.count}</span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
