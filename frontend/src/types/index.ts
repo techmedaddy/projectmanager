@@ -50,3 +50,7 @@ export interface ProjectDetailResponse {
 export interface TasksResponse {
   tasks: Task[];
 }
+
+export interface AssigneesResponse {
+  users: User[];
+}

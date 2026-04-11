@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../../lib/api';
-import { Task, TaskStatus, TaskPriority } from '../../types';
+import { Task, TaskStatus, TaskPriority, AssigneesResponse } from '../../types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -13,19 +13,13 @@ import { Textarea } from '../ui/textarea';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const uuidMessage = 'Assignee ID must be a valid UUID';
-
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   status: z.enum(['todo', 'in_progress', 'done']),
   priority: z.enum(['low', 'medium', 'high']),
   due_date: z.string().nullable().optional(),
-  assignee_id: z
-    .string()
-    .nullable()
-    .optional()
-    .refine((value) => value == null || z.string().uuid().safeParse(value).success, uuidMessage),
+  assignee_id: z.string().nullable().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -76,6 +70,18 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
       }
     }
   }, [isOpen, task, reset]);
+
+  const {
+    data: assigneesData,
+    isLoading: isAssigneesLoading,
+    error: assigneesError,
+  } = useQuery<AssigneesResponse>({
+    queryKey: ['project-assignees', projectId],
+    queryFn: () => fetchApi(`/projects/${projectId}/assignees`),
+    enabled: isOpen,
+  });
+
+  const assigneeOptions = assigneesData?.users ?? [];
 
   const saveMutation = useMutation({
     mutationFn: (data: TaskFormValues) => {
@@ -194,32 +200,28 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="assignee_id">Assignee ID</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setValue('assignee_id', null, { shouldValidate: true, shouldDirty: true })}
-                className="h-7 px-2 text-xs text-stone-500"
-              >
-                Clear
-              </Button>
-            </div>
-            <Input
+            <Label htmlFor="assignee_id">Assignee</Label>
+            <select
               id="assignee_id"
-              placeholder="e.g. 11111111-1111-1111-1111-111111111111"
-              value={watch('assignee_id') ?? ''}
+              value={watch('assignee_id') ?? 'unassigned'}
               onChange={(event) => {
-                const value = event.target.value.trim();
-                setValue('assignee_id', value === '' ? null : value, { shouldValidate: true, shouldDirty: true });
+                const value = event.target.value;
+                setValue('assignee_id', value === 'unassigned' ? null : value, { shouldValidate: true, shouldDirty: true });
               }}
-              className={errors.assignee_id ? 'border-red-500' : ''}
-            />
-            {errors.assignee_id ? (
-              <p className="text-sm text-red-500">{errors.assignee_id.message}</p>
+              className="flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-300"
+              disabled={isAssigneesLoading}
+            >
+              <option value="unassigned">Unassigned</option>
+              {assigneeOptions.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
+            {assigneesError ? (
+              <p className="text-sm text-amber-600">Could not load assignee options. You can still save as Unassigned.</p>
             ) : (
-              <p className="text-xs text-stone-500">Leave blank to keep task unassigned.</p>
+              <p className="text-xs text-stone-500">Choose a team member or keep it unassigned.</p>
             )}
           </div>
 
