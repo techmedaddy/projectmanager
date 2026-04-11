@@ -103,6 +103,7 @@ func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([
 		LEFT JOIN tasks t ON t.project_id = p.id
 		WHERE p.owner_id = $1
 		   OR t.assignee_id = $1
+		   OR t.creator_id = $1
 		ORDER BY p.created_at DESC
 	`
 
