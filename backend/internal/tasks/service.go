@@ -37,7 +37,7 @@ type taskRepository interface {
 
 type projectRepository interface {
 	GetOwnerID(ctx context.Context, id string) (string, error)
-	HasAssignedTask(ctx context.Context, projectID, userID string) (bool, error)
+	HasTaskInvolvement(ctx context.Context, projectID, userID string) (bool, error)
 }
 
 type userRepository interface {
@@ -222,12 +222,12 @@ func (s *Service) authorizeProjectAccess(ctx context.Context, projectID, userID 
 		return ownerID, nil
 	}
 
-	hasAssignedTask, err := s.projectsRepo.HasAssignedTask(ctx, projectID, userID)
+	hasTaskInvolvement, err := s.projectsRepo.HasTaskInvolvement(ctx, projectID, userID)
 	if err != nil {
 		return "", fmt.Errorf("check project access: %w", err)
 	}
 
-	if !hasAssignedTask {
+	if !hasTaskInvolvement {
 		return "", ErrTaskProjectForbidden
 	}
 
@@ -244,7 +244,7 @@ func (s *Service) authorizeTaskUpdate(ctx context.Context, taskID, userID string
 		return task, nil
 	}
 
-	hasProjectAccess, err := s.projectsRepo.HasAssignedTask(ctx, task.ProjectID, userID)
+	hasProjectAccess, err := s.projectsRepo.HasTaskInvolvement(ctx, task.ProjectID, userID)
 	if err != nil {
 		return Task{}, fmt.Errorf("check task project access: %w", err)
 	}

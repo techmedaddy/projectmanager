@@ -129,17 +129,14 @@ func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([
 	return projects, nil
 }
 
-// HasAssignedTask reports whether the user has at least one task assigned in
-// the project.
-//
-// Note: this is currently assignee-only and is used by access checks; creator
-// involvement is handled separately from this helper.
-func (r *Repository) HasAssignedTask(ctx context.Context, projectID, userID string) (bool, error) {
+// HasTaskInvolvement reports whether the user is involved in at least one task
+// in the project, either as creator or assignee.
+func (r *Repository) HasTaskInvolvement(ctx context.Context, projectID, userID string) (bool, error) {
 	const query = `
 		SELECT 1
 		FROM tasks
 		WHERE project_id = $1
-		  AND assignee_id = $2
+		  AND (assignee_id = $2 OR creator_id = $2)
 		LIMIT 1
 	`
 
@@ -151,7 +148,7 @@ func (r *Repository) HasAssignedTask(ctx context.Context, projectID, userID stri
 	case errors.Is(err, pgx.ErrNoRows):
 		return false, nil
 	default:
-		return false, fmt.Errorf("check assigned task access: %w", err)
+		return false, fmt.Errorf("check task involvement access: %w", err)
 	}
 }
 

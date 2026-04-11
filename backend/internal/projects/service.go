@@ -25,7 +25,7 @@ type projectRepository interface {
 	ListAccessibleByUser(ctx context.Context, userID string) ([]Project, error)
 	Update(ctx context.Context, params UpdateParams) (Project, error)
 	Delete(ctx context.Context, id string) error
-	HasAssignedTask(ctx context.Context, projectID, userID string) (bool, error)
+	HasTaskInvolvement(ctx context.Context, projectID, userID string) (bool, error)
 }
 
 type taskRepository interface {
@@ -145,12 +145,12 @@ func (s *Service) authorizeAccess(ctx context.Context, projectID, userID string)
 		return project, nil
 	}
 
-	hasAssignedTask, err := s.projectsRepo.HasAssignedTask(ctx, projectID, userID)
+	hasTaskInvolvement, err := s.projectsRepo.HasTaskInvolvement(ctx, projectID, userID)
 	if err != nil {
 		return Project{}, fmt.Errorf("check project access: %w", err)
 	}
 
-	if !hasAssignedTask {
+	if !hasTaskInvolvement {
 		return Project{}, ErrProjectForbidden
 	}
 
