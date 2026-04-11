@@ -49,6 +49,17 @@ export function ProjectDetail() {
     placeholderData: (previousData) => previousData,
   });
 
+  const allProjectTasks = projectData?.tasks ?? [];
+  const tasks = tasksData?.tasks ?? [];
+
+  const assigneeOptions = useMemo(() => {
+    return Array.from(
+      new Set(allProjectTasks.map((task) => task.assignee_id).filter((value): value is string => value !== null))
+    );
+  }, [allProjectTasks]);
+
+  const hasActiveFilters = statusFilter !== 'all' || assigneeFilter !== 'all';
+
   const handleOpenCreate = () => {
     setSelectedTask(undefined);
     setIsTaskModalOpen(true);
@@ -78,16 +89,7 @@ export function ProjectDetail() {
     );
   }
 
-  const { project, tasks: allProjectTasks } = projectData;
-  const tasks = tasksData?.tasks ?? [];
-
-  const assigneeOptions = useMemo(() => {
-    return Array.from(
-      new Set(allProjectTasks.map((task) => task.assignee_id).filter((value): value is string => value !== null))
-    );
-  }, [allProjectTasks]);
-
-  const hasActiveFilters = statusFilter !== 'all' || assigneeFilter !== 'all';
+  const { project } = projectData;
 
   const handleResetFilters = () => {
     setStatusFilter('all');
