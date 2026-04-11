@@ -38,8 +38,16 @@ type Response struct {
 }
 
 // ListResponse is the response body for task list endpoints.
+type PaginationMeta struct {
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
+	Total int `json:"total"`
+}
+
+// ListResponse is the response body for task list endpoints.
 type ListResponse struct {
-	Tasks []Response `json:"tasks"`
+	Tasks []Response      `json:"tasks"`
+	Meta  *PaginationMeta `json:"meta,omitempty"`
 }
 
 // ToResponse converts a repository task model into its API DTO.

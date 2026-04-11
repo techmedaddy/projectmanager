@@ -50,6 +50,12 @@ func (app *application) listTasksHandler(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	pagination, paginationFields := parsePaginationParams(r)
+	if paginationFields.HasAny() {
+		response.Validation(w, paginationFields)
+		return
+	}
+
 	filters, validationFields := buildTaskListFilters(r)
 	if validationFields.HasAny() {
 		response.Validation(w, validationFields)
@@ -62,8 +68,17 @@ func (app *application) listTasksHandler(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	total := len(projectTasks)
+	start, end := paginateBounds(total, pagination)
+	pagedTasks := projectTasks[start:end]
+
 	response.JSON(w, http.StatusOK, tasks.ListResponse{
-		Tasks: tasks.ToResponses(projectTasks),
+		Tasks: tasks.ToResponses(pagedTasks),
+		Meta: &tasks.PaginationMeta{
+			Page:  pagination.Page,
+			Limit: pagination.Limit,
+			Total: total,
+		},
 	})
 }
 

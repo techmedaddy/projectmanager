@@ -28,8 +28,16 @@ type Response struct {
 }
 
 // ListResponse is the response body for GET /projects.
+type PaginationMeta struct {
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
+	Total int `json:"total"`
+}
+
+// ListResponse is the response body for GET /projects.
 type ListResponse struct {
-	Projects []Response `json:"projects"`
+	Projects []Response      `json:"projects"`
+	Meta     *PaginationMeta `json:"meta,omitempty"`
 }
 
 // DetailResponse is the response body for GET /projects/:id.

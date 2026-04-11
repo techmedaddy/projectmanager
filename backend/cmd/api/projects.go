@@ -78,6 +78,12 @@ func (app *application) listProjectsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	pagination, fields := parsePaginationParams(r)
+	if fields.HasAny() {
+		response.Validation(w, fields)
+		return
+	}
+
 	projectList, err := app.projectsService.ListAccessible(r.Context(), currentUser.ID)
 	if err != nil {
 		app.logRequestError(r, "list projects failed", err)
@@ -85,8 +91,17 @@ func (app *application) listProjectsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	total := len(projectList)
+	start, end := paginateBounds(total, pagination)
+	pagedProjects := projectList[start:end]
+
 	response.JSON(w, http.StatusOK, projects.ListResponse{
-		Projects: projects.ToResponses(projectList),
+		Projects: projects.ToResponses(pagedProjects),
+		Meta: &projects.PaginationMeta{
+			Page:  pagination.Page,
+			Limit: pagination.Limit,
+			Total: total,
+		},
 	})
 }
 
