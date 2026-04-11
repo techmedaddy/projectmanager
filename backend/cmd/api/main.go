@@ -44,6 +44,18 @@ func main() {
 	}
 	defer dbConn.Close()
 
+	seedResult, err := db.RunSeedIfNeeded(startupCtx, dbConn, cfg.AutoSeed)
+	if err != nil {
+		log.Fatalf("run seed data: %v", err)
+	}
+
+	logger.Info(
+		"seed runner finished",
+		slog.Bool("auto_seed_enabled", seedResult.Enabled),
+		slog.Bool("seed_applied", seedResult.Applied),
+		slog.String("seed_result", seedResult.Reason),
+	)
+
 	app := newApplication(logger, cfg, dbConn)
 
 	server := &http.Server{
