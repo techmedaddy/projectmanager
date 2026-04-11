@@ -43,6 +43,35 @@ func (app *application) projectByIDHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func (app *application) projectStatsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response.MethodNotAllowed(w)
+		return
+	}
+
+	projectID := r.PathValue("id")
+	if !isUUID(projectID) {
+		response.BadRequest(w, "invalid project id")
+		return
+	}
+
+	currentUser, ok := currentUserOr401(w, r)
+	if !ok {
+		return
+	}
+
+	stats, err := app.projectsService.GetStats(r.Context(), projectID, currentUser.ID)
+	if err != nil {
+		app.handleProjectServiceError(w, r, err, "get project stats failed")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, projects.StatsResponse{
+		ByStatus:   stats.ByStatus,
+		ByAssignee: stats.ByAssignee,
+	})
+}
+
 func (app *application) listProjectsHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := currentUserOr401(w, r)
 	if !ok {

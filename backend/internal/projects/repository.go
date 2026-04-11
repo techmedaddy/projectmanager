@@ -34,6 +34,12 @@ type UpdateParams struct {
 	Description *string
 }
 
+// ProjectStats aggregates task counts for a project.
+type ProjectStats struct {
+	ByStatus   map[string]int
+	ByAssignee map[string]int
+}
+
 // Repository provides explicit project queries backed by PostgreSQL.
 type Repository struct {
 	q db.Querier
@@ -179,6 +185,74 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+// GetStats returns task counts by status and by assignee for a project.
+func (r *Repository) GetStats(ctx context.Context, projectID string) (ProjectStats, error) {
+	statusCounts := map[string]int{
+		"todo":        0,
+		"in_progress": 0,
+		"done":        0,
+	}
+
+	const statusQuery = `
+		SELECT status::text, COUNT(*)
+		FROM tasks
+		WHERE project_id = $1
+		GROUP BY status
+	`
+
+	statusRows, err := r.q.Query(ctx, statusQuery, projectID)
+	if err != nil {
+		return ProjectStats{}, fmt.Errorf("query status stats: %w", err)
+	}
+	defer statusRows.Close()
+
+	for statusRows.Next() {
+		var (
+			status string
+			count  int
+		)
+		if scanErr := statusRows.Scan(&status, &count); scanErr != nil {
+			return ProjectStats{}, fmt.Errorf("scan status stats: %w", scanErr)
+		}
+		statusCounts[status] = count
+	}
+
+	if err := statusRows.Err(); err != nil {
+		return ProjectStats{}, fmt.Errorf("iterate status stats: %w", err)
+	}
+
+	assigneeCounts := map[string]int{}
+	const assigneeQuery = `
+		SELECT COALESCE(assignee_id::text, 'unassigned') AS assignee_key, COUNT(*)
+		FROM tasks
+		WHERE project_id = $1
+		GROUP BY assignee_key
+	`
+
+	assigneeRows, err := r.q.Query(ctx, assigneeQuery, projectID)
+	if err != nil {
+		return ProjectStats{}, fmt.Errorf("query assignee stats: %w", err)
+	}
+	defer assigneeRows.Close()
+
+	for assigneeRows.Next() {
+		var (
+			assigneeKey string
+			count       int
+		)
+		if scanErr := assigneeRows.Scan(&assigneeKey, &count); scanErr != nil {
+			return ProjectStats{}, fmt.Errorf("scan assignee stats: %w", scanErr)
+		}
+		assigneeCounts[assigneeKey] = count
+	}
+
+	if err := assigneeRows.Err(); err != nil {
+		return ProjectStats{}, fmt.Errorf("iterate assignee stats: %w", err)
+	}
+
+	return ProjectStats{ByStatus: statusCounts, ByAssignee: assigneeCounts}, nil
 }
 
 type projectScanner interface {

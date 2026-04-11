@@ -26,6 +26,7 @@ type projectRepository interface {
 	Update(ctx context.Context, params UpdateParams) (Project, error)
 	Delete(ctx context.Context, id string) error
 	HasTaskInvolvement(ctx context.Context, projectID, userID string) (bool, error)
+	GetStats(ctx context.Context, projectID string) (ProjectStats, error)
 }
 
 type taskRepository interface {
@@ -126,6 +127,21 @@ func (s *Service) Delete(ctx context.Context, projectID, userID string) error {
 	}
 
 	return nil
+}
+
+// GetStats returns project task aggregates (by status and by assignee) for an
+// authorized user.
+func (s *Service) GetStats(ctx context.Context, projectID, userID string) (ProjectStats, error) {
+	if _, err := s.authorizeAccess(ctx, projectID, userID); err != nil {
+		return ProjectStats{}, err
+	}
+
+	stats, err := s.projectsRepo.GetStats(ctx, projectID)
+	if err != nil {
+		return ProjectStats{}, fmt.Errorf("get project stats: %w", err)
+	}
+
+	return stats, nil
 }
 
 // authorizeAccess enforces project visibility checks.

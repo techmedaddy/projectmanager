@@ -38,6 +38,12 @@ type DetailResponse struct {
 	Tasks   []tasks.Response `json:"tasks"`
 }
 
+// StatsResponse is the response body for GET /projects/:id/stats.
+type StatsResponse struct {
+	ByStatus   map[string]int `json:"by_status"`
+	ByAssignee map[string]int `json:"by_assignee"`
+}
+
 // ToResponse converts a repository project model into its API DTO.
 func ToResponse(project Project) Response {
 	return Response{
