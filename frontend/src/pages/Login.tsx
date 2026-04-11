@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchApi, ApiError, API_BASE_URL } from '../lib/api';
+import { fetchApi, ApiError } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -49,14 +49,11 @@ export function Login() {
       });
       
       // Fetch user profile immediately after login to populate context
-      const meResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+      const meData = await fetchApi<{ user: { id: string; name: string; email: string } }>('/auth/me', {
         headers: {
-          'Authorization': `Bearer ${response.access_token}`
-        }
+          Authorization: `Bearer ${response.access_token}`,
+        },
       });
-      
-      if (!meResponse.ok) throw new Error('Failed to fetch user profile');
-      const meData = await meResponse.json();
 
       login(response.access_token, meData.user);
       toast.success('Welcome back!');
