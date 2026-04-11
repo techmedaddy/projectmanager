@@ -4,7 +4,7 @@ import { Task, TaskStatus } from '../../types';
 import { fetchApi } from '../../lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Calendar, Clock, CheckCircle2, Circle, ArrowRightCircle } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, ArrowRightCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 
@@ -23,6 +23,12 @@ const COLUMNS: { id: TaskStatus; title: string; icon: React.ElementType }[] = [
 export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
   const queryClient = useQueryClient();
 
+  const matchesTaskFilters = (task: Task, statusFilter: unknown, assigneeFilter: unknown) => {
+    const statusMatches = statusFilter === 'all' || task.status === statusFilter;
+    const assigneeMatches = assigneeFilter === 'all' || task.assignee_id === assigneeFilter;
+    return statusMatches && assigneeMatches;
+  };
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ taskId, status }: { taskId: string; status: TaskStatus }) =>
       fetchApi(`/tasks/${taskId}`, {
@@ -30,27 +36,53 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
         body: JSON.stringify({ status }),
       }),
     onMutate: async ({ taskId, status }) => {
-      await queryClient.cancelQueries({ queryKey: ['project', projectId] });
-      const previousData = queryClient.getQueryData(['project', projectId]);
+      await queryClient.cancelQueries({ queryKey: ['project-tasks', projectId] });
+      const previousTaskQueries = queryClient.getQueriesData({ queryKey: ['project-tasks', projectId] }) as Array<[
+        readonly unknown[],
+        any,
+      ]>;
+      const previousProjectDetail = queryClient.getQueryData(['project-detail', projectId]);
 
-      queryClient.setQueryData(['project', projectId], (old: any) => {
-        if (!old) return old;
+      previousTaskQueries.forEach(([queryKey, cachedData]) => {
+        const keyParts = Array.isArray(queryKey) ? queryKey : [];
+        const statusFilter = keyParts[2] ?? 'all';
+        const assigneeFilter = keyParts[3] ?? 'all';
+
+        queryClient.setQueryData(queryKey, (old: any) => {
+          const sourceTasks: Task[] = old?.tasks ?? (cachedData as any)?.tasks;
+          if (!Array.isArray(sourceTasks)) return old;
+
+          const updatedTasks = sourceTasks
+            .map((task) => (task.id === taskId ? { ...task, status } : task))
+            .filter((task) => matchesTaskFilters(task, statusFilter, assigneeFilter));
+
+          return {
+            ...(old ?? cachedData),
+            tasks: updatedTasks,
+          };
+        });
+      });
+
+      queryClient.setQueryData(['project-detail', projectId], (old: any) => {
+        if (!old?.tasks) return old;
         return {
           ...old,
-          tasks: old.tasks.map((t: Task) =>
-            t.id === taskId ? { ...t, status } : t
-          ),
+          tasks: old.tasks.map((t: Task) => (t.id === taskId ? { ...t, status } : t)),
         };
       });
 
-      return { previousData };
+      return { previousTaskQueries, previousProjectDetail };
     },
-    onError: (err, newTodo, context) => {
-      queryClient.setQueryData(['project', projectId], context?.previousData);
+    onError: (_err, _variables, context) => {
+      context?.previousTaskQueries?.forEach(([queryKey, data]: [unknown, unknown]) => {
+        queryClient.setQueryData(queryKey as readonly unknown[], data);
+      });
+      queryClient.setQueryData(['project-detail', projectId], context?.previousProjectDetail);
       toast.error('Failed to update task status');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectId] });
     },
   });
 

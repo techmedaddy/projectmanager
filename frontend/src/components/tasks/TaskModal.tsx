@@ -13,13 +13,19 @@ import { Textarea } from '../ui/textarea';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const uuidMessage = 'Assignee ID must be a valid UUID';
+
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   status: z.enum(['todo', 'in_progress', 'done']),
   priority: z.enum(['low', 'medium', 'high']),
   due_date: z.string().nullable().optional(),
-  assignee_id: z.string().nullable().optional(),
+  assignee_id: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((value) => value == null || z.string().uuid().safeParse(value).success, uuidMessage),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -73,20 +79,27 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
 
   const saveMutation = useMutation({
     mutationFn: (data: TaskFormValues) => {
+      const payload = {
+        ...data,
+        assignee_id: data.assignee_id ?? null,
+        due_date: data.due_date ?? null,
+      };
+
       if (isEditing) {
         return fetchApi(`/tasks/${task.id}`, {
           method: 'PATCH',
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
       } else {
         return fetchApi(`/projects/${projectId}/tasks`, {
           method: 'POST',
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       toast.success(isEditing ? 'Task updated' : 'Task created');
       onClose();
     },
@@ -98,7 +111,8 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
   const deleteMutation = useMutation({
     mutationFn: () => fetchApi(`/tasks/${task?.id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       toast.success('Task deleted');
       onClose();
     },
@@ -171,8 +185,42 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
             <Input
               id="due_date"
               type="date"
-              {...register('due_date')}
+              value={watch('due_date') ?? ''}
+              onChange={(event) => {
+                const value = event.target.value.trim();
+                setValue('due_date', value === '' ? null : value, { shouldValidate: true });
+              }}
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="assignee_id">Assignee ID</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setValue('assignee_id', null, { shouldValidate: true, shouldDirty: true })}
+                className="h-7 px-2 text-xs text-stone-500"
+              >
+                Clear
+              </Button>
+            </div>
+            <Input
+              id="assignee_id"
+              placeholder="e.g. 11111111-1111-1111-1111-111111111111"
+              value={watch('assignee_id') ?? ''}
+              onChange={(event) => {
+                const value = event.target.value.trim();
+                setValue('assignee_id', value === '' ? null : value, { shouldValidate: true, shouldDirty: true });
+              }}
+              className={errors.assignee_id ? 'border-red-500' : ''}
+            />
+            {errors.assignee_id ? (
+              <p className="text-sm text-red-500">{errors.assignee_id.message}</p>
+            ) : (
+              <p className="text-xs text-stone-500">Leave blank to keep task unassigned.</p>
+            )}
           </div>
 
           <DialogFooter className="pt-4 flex justify-between sm:justify-between">
