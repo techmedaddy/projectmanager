@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { fetchApi } from '../lib/api';
+import { ApiError, fetchApi } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -19,16 +19,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      if (token) {
-        try {
-          const data = await fetchApi<{ user: User }>('/auth/me');
-          setUser(data.user);
-        } catch (error) {
-          console.error('Failed to fetch user', error);
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const data = await fetchApi<{ user: User }>('/auth/me');
+        setUser(data.user);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          // Standard API error path: clear stale auth state.
+          logout();
+        } else {
+          // Unknown runtime path: still clear stale auth state.
           logout();
         }
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initAuth();
