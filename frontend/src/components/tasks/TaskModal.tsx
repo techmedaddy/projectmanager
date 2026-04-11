@@ -220,6 +220,8 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
             </select>
             {assigneesError ? (
               <p className="text-sm text-amber-600">Could not load assignee options. You can still save as Unassigned.</p>
+            ) : !isAssigneesLoading && assigneeOptions.length === 0 ? (
+              <p className="text-xs text-stone-500">No assignee options found for this project yet. New tasks can remain Unassigned.</p>
             ) : (
               <p className="text-xs text-stone-500">Choose a team member or keep it unassigned.</p>
             )}
