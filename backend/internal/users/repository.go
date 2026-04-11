@@ -102,3 +102,48 @@ func (r *Repository) GetByID(ctx context.Context, id string) (User, error) {
 
 	return user, nil
 }
+
+// ListProjectAssignees returns unique users involved in project tasks (creator
+// or assignee) plus the project owner.
+func (r *Repository) ListProjectAssignees(ctx context.Context, projectID string) ([]User, error) {
+	const query = `
+		SELECT DISTINCT u.id::text, u.name, u.email, u.password, u.created_at
+		FROM users u
+		JOIN (
+			SELECT p.owner_id AS user_id
+			FROM projects p
+			WHERE p.id = $1
+			UNION
+			SELECT t.assignee_id AS user_id
+			FROM tasks t
+			WHERE t.project_id = $1
+			  AND t.assignee_id IS NOT NULL
+			UNION
+			SELECT t.creator_id AS user_id
+			FROM tasks t
+			WHERE t.project_id = $1
+		) involved ON involved.user_id = u.id
+		ORDER BY u.name ASC, u.created_at ASC
+	`
+
+	rows, err := r.q.Query(ctx, query, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("list project assignees: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]User, 0)
+	for rows.Next() {
+		var user User
+		if scanErr := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.CreatedAt); scanErr != nil {
+			return nil, fmt.Errorf("scan project assignee: %w", scanErr)
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate project assignees: %w", err)
+	}
+
+	return users, nil
+}

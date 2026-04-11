@@ -16,6 +16,7 @@ type application struct {
 	authService     *auth.Service
 	projectsService *projects.Service
 	tasksService    *tasks.Service
+	usersService    *users.Service
 }
 
 func newApplication(logger *slog.Logger, cfg config.Config, dbConn *db.Database) *application {
@@ -28,5 +29,6 @@ func newApplication(logger *slog.Logger, cfg config.Config, dbConn *db.Database)
 		authService:     auth.NewService(usersRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptCost),
 		projectsService: projects.NewService(projectsRepo, tasksRepo),
 		tasksService:    tasks.NewService(tasksRepo, projectsRepo, usersRepo),
+		usersService:    users.NewService(usersRepo),
 	}
 }

@@ -13,6 +13,7 @@ func newRouter(app *application) http.Handler {
 	mux.Handle("/projects", app.requireAuth(http.HandlerFunc(app.projectsHandler)))
 	mux.Handle("/projects/{id}", app.requireAuth(http.HandlerFunc(app.projectByIDHandler)))
 	mux.Handle("/projects/{id}/tasks", app.requireAuth(http.HandlerFunc(app.tasksByProjectHandler)))
+	mux.Handle("/projects/{id}/assignees", app.requireAuth(http.HandlerFunc(app.projectAssigneesHandler)))
 	mux.Handle("/tasks/{id}", app.requireAuth(http.HandlerFunc(app.taskByIDHandler)))
 	mux.HandleFunc("/", notFoundHandler)
 
