@@ -14,6 +14,8 @@ export function ProjectDetail() {
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<'all' | string>('all');
+  const [tasksPage, setTasksPage] = useState(1);
+  const tasksLimit = 9;
 
   const { data: projectData, isLoading: isProjectLoading, error: projectError } = useQuery<ProjectDetailResponse>({
     queryKey: ['project-detail', id],
@@ -23,6 +25,9 @@ export function ProjectDetail() {
 
   const taskFilters = useMemo(() => {
     const params = new URLSearchParams();
+
+    params.set('page', String(tasksPage));
+    params.set('limit', String(tasksLimit));
 
     if (statusFilter !== 'all') {
       params.set('status', statusFilter);
@@ -34,7 +39,7 @@ export function ProjectDetail() {
 
     const queryString = params.toString();
     return queryString ? `?${queryString}` : '';
-  }, [statusFilter, assigneeFilter]);
+  }, [statusFilter, assigneeFilter, tasksPage]);
 
   const {
     data: tasksData,
@@ -43,7 +48,7 @@ export function ProjectDetail() {
     error: tasksError,
     refetch: refetchTasks,
   } = useQuery<TasksResponse>({
-    queryKey: ['project-tasks', id, statusFilter, assigneeFilter],
+    queryKey: ['project-tasks', id, statusFilter, assigneeFilter, tasksPage, tasksLimit],
     queryFn: () => fetchApi(`/projects/${id}/tasks${taskFilters}`),
     enabled: !!id,
     placeholderData: (previousData) => previousData,
@@ -64,6 +69,7 @@ export function ProjectDetail() {
   });
   const allProjectTasks = projectData?.tasks ?? [];
   const tasks = tasksData?.items ?? tasksData?.tasks ?? [];
+  const tasksMeta = tasksData?.meta;
 
   const assigneeOptions = useMemo(() => {
     return Array.from(
@@ -72,6 +78,12 @@ export function ProjectDetail() {
   }, [allProjectTasks]);
 
   const hasActiveFilters = statusFilter !== 'all' || assigneeFilter !== 'all';
+
+  const tasksTotalPages = useMemo(() => {
+    const total = tasksMeta?.total ?? tasks.length;
+    const limit = tasksMeta?.limit ?? tasksLimit;
+    return Math.max(1, Math.ceil(total / limit));
+  }, [tasksMeta, tasks.length]);
 
   const assigneeNameByID = useMemo(() => {
     const map = new Map<string, string>();
@@ -136,6 +148,7 @@ export function ProjectDetail() {
   const handleResetFilters = () => {
     setStatusFilter('all');
     setAssigneeFilter('all');
+    setTasksPage(1);
   };
 
   return (
@@ -201,7 +214,10 @@ export function ProjectDetail() {
             <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Status</span>
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as 'all' | TaskStatus)}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as 'all' | TaskStatus);
+                setTasksPage(1);
+              }}
               className="h-10 w-full rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-300 sm:min-w-44"
             >
               <option value="all">All statuses</option>
@@ -215,7 +231,10 @@ export function ProjectDetail() {
             <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Assignee</span>
             <select
               value={assigneeFilter}
-              onChange={(event) => setAssigneeFilter(event.target.value)}
+              onChange={(event) => {
+                setAssigneeFilter(event.target.value);
+                setTasksPage(1);
+              }}
               className="h-10 w-full rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-300 sm:min-w-56"
             >
               <option value="all">All assignees</option>
@@ -259,13 +278,13 @@ export function ProjectDetail() {
                     : 'Failed to load filtered tasks.';
 
             return (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <p>{message}</p>
-            {status && <p className="text-xs text-red-600 mt-1">Error code: {status}</p>}
-            <Button variant="outline" className="mt-3" onClick={() => void refetchTasks()}>
-              Retry
-            </Button>
-          </div>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p>{message}</p>
+                {status && <p className="text-xs text-red-600 mt-1">Error code: {status}</p>}
+                <Button variant="outline" className="mt-3" onClick={() => void refetchTasks()}>
+                  Retry
+                </Button>
+              </div>
             );
           })()
         ) : hasActiveFilters && tasks.length === 0 ? (
@@ -277,7 +296,33 @@ export function ProjectDetail() {
             </Button>
           </div>
         ) : (
-          <TaskBoard tasks={tasks} projectId={project.id} onTaskClick={handleOpenEdit} />
+          <>
+            <TaskBoard tasks={tasks} projectId={project.id} onTaskClick={handleOpenEdit} />
+
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-stone-200 bg-white p-3">
+              <p className="text-sm text-stone-500">
+                Page <span className="font-medium text-stone-700">{tasksMeta?.page ?? tasksPage}</span> · Total tasks{' '}
+                <span className="font-medium text-stone-700">{tasksMeta?.total ?? tasks.length}</span>
+                {isTasksFetching ? ' · Updating…' : ''}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setTasksPage((p) => Math.max(1, p - 1))}
+                  disabled={(tasksMeta?.page ?? tasksPage) <= 1 || isTasksFetching}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setTasksPage((p) => Math.min(tasksTotalPages, p + 1))}
+                  disabled={(tasksMeta?.page ?? tasksPage) >= tasksTotalPages || isTasksFetching}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

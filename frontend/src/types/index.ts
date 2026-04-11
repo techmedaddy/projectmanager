@@ -38,9 +38,16 @@ export interface MeResponse {
   user: User;
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+}
+
 export interface ProjectsResponse {
   items: Project[];
   projects?: Project[];
+  meta?: PaginationMeta;
 }
 
 export interface ProjectDetailResponse {
@@ -51,6 +58,7 @@ export interface ProjectDetailResponse {
 export interface TasksResponse {
   items: Task[];
   tasks?: Task[];
+  meta?: PaginationMeta;
 }
 
 export interface AssigneesResponse {

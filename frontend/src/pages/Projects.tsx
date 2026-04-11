@@ -26,10 +26,12 @@ type ProjectFormValues = z.infer<typeof projectSchema>;
 export function Projects() {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 6;
 
-  const { data, isLoading, error } = useQuery<ProjectsResponse>({
-    queryKey: ['projects'],
-    queryFn: () => fetchApi('/projects'),
+  const { data, isLoading, error, isFetching } = useQuery<ProjectsResponse>({
+    queryKey: ['projects', page, limit],
+    queryFn: () => fetchApi(`/projects?page=${page}&limit=${limit}`),
   });
 
   const createMutation = useMutation({
@@ -40,6 +42,7 @@ export function Projects() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setPage(1);
       setIsCreateOpen(false);
       reset();
       toast.success('Project created successfully');
@@ -87,6 +90,9 @@ export function Projects() {
   }
 
   const projects = data?.items ?? data?.projects ?? [];
+  const meta = data?.meta;
+
+  const totalPages = meta ? Math.max(1, Math.ceil(meta.total / meta.limit)) : 1;
 
   return (
     <div className="space-y-8">
@@ -152,28 +158,46 @@ export function Projects() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <Link key={project.id} to={`/projects/${project.id}`} className="block group">
-              <Card className="h-full border-stone-200 shadow-sm hover:shadow-md transition-all hover:border-stone-300 bg-white">
-                <CardHeader>
-                  <CardTitle className="text-lg group-hover:text-orange-600 transition-colors">
-                    {project.name}
-                  </CardTitle>
-                  <CardDescription className="line-clamp-2 mt-2">
-                    {project.description || 'No description provided.'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center text-xs text-stone-400 mt-4">
-                    <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                    Created {format(new Date(project.created_at), 'MMM d, yyyy')}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <Link key={project.id} to={`/projects/${project.id}`} className="block group">
+                <Card className="h-full border-stone-200 shadow-sm hover:shadow-md transition-all hover:border-stone-300 bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-lg group-hover:text-orange-600 transition-colors">
+                      {project.name}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 mt-2">
+                      {project.description || 'No description provided.'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center text-xs text-stone-400 mt-4">
+                      <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                      Created {format(new Date(project.created_at), 'MMM d, yyyy')}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white p-3">
+            <p className="text-sm text-stone-500">
+              Page <span className="font-medium text-stone-700">{meta?.page ?? page}</span> of{' '}
+              <span className="font-medium text-stone-700">{totalPages}</span>
+              {isFetching ? ' · Updating…' : ''}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(meta?.page ?? page) <= 1 || isFetching}>
+                Previous
+              </Button>
+              <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={(meta?.page ?? page) >= totalPages || isFetching}>
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
