@@ -71,7 +71,7 @@ func (app *application) listTasksHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	response.JSON(w, http.StatusOK, tasks.ListResponse{
-		Tasks: tasks.ToResponses(projectTasks),
+		Items: tasks.ToResponses(projectTasks),
 		Meta: &tasks.PaginationMeta{
 			Page:  pagination.Page,
 			Limit: pagination.Limit,

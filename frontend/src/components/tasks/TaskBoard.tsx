@@ -49,7 +49,7 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
         const assigneeFilter = keyParts[3] ?? 'all';
 
         queryClient.setQueryData(queryKey, (old: any) => {
-          const sourceTasks: Task[] = old?.tasks ?? (cachedData as any)?.tasks;
+          const sourceTasks: Task[] = old?.items ?? old?.tasks ?? (cachedData as any)?.items ?? (cachedData as any)?.tasks;
           if (!Array.isArray(sourceTasks)) return old;
 
           const updatedTasks = sourceTasks
@@ -58,7 +58,7 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
 
           return {
             ...(old ?? cachedData),
-            tasks: updatedTasks,
+            items: updatedTasks,
           };
         });
       });

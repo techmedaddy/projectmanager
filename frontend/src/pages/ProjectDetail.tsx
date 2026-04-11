@@ -63,7 +63,7 @@ export function ProjectDetail() {
     enabled: !!id,
   });
   const allProjectTasks = projectData?.tasks ?? [];
-  const tasks = tasksData?.tasks ?? [];
+  const tasks = tasksData?.items ?? tasksData?.tasks ?? [];
 
   const assigneeOptions = useMemo(() => {
     return Array.from(

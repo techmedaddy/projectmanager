@@ -39,7 +39,8 @@ export interface MeResponse {
 }
 
 export interface ProjectsResponse {
-  projects: Project[];
+  items: Project[];
+  projects?: Project[];
 }
 
 export interface ProjectDetailResponse {
@@ -48,7 +49,8 @@ export interface ProjectDetailResponse {
 }
 
 export interface TasksResponse {
-  tasks: Task[];
+  items: Task[];
+  tasks?: Task[];
 }
 
 export interface AssigneesResponse {

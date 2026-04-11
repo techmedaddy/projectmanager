@@ -86,7 +86,7 @@ export function Projects() {
     );
   }
 
-  const projects = data?.projects || [];
+  const projects = data?.items ?? data?.projects ?? [];
 
   return (
     <div className="space-y-8">

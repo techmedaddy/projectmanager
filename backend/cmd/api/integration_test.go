@@ -213,13 +213,13 @@ func TestProjectsVisibilityWhenUserIsAssignee(t *testing.T) {
 	}
 
 	var listBody struct {
-		Projects []struct {
+		Items []struct {
 			ID string `json:"id"`
-		} `json:"projects"`
+		} `json:"items"`
 	}
 	decodeJSONBody(t, listResp, &listBody)
 
-	if !containsProjectID(listBody.Projects, seedProjectID) {
+	if !containsProjectID(listBody.Items, seedProjectID) {
 		t.Fatalf("expected project %s to be visible to assignee", seedProjectID)
 	}
 
@@ -291,13 +291,13 @@ func TestProjectsVisibilityWhenUserIsCreatorButNotAssignee(t *testing.T) {
 	}
 
 	var listBody struct {
-		Projects []struct {
+		Items []struct {
 			ID string `json:"id"`
-		} `json:"projects"`
+		} `json:"items"`
 	}
 	decodeJSONBody(t, listResp, &listBody)
 
-	if !containsProjectID(listBody.Projects, seedProjectID) {
+	if !containsProjectID(listBody.Items, seedProjectID) {
 		t.Fatalf("expected project %s to remain visible to creator", seedProjectID)
 	}
 
@@ -327,13 +327,13 @@ func TestProjectsVisibilityDeniedWhenUserIsNotOwnerCreatorOrAssignee(t *testing.
 	}
 
 	var listBody struct {
-		Projects []struct {
+		Items []struct {
 			ID string `json:"id"`
-		} `json:"projects"`
+		} `json:"items"`
 	}
 	decodeJSONBody(t, listResp, &listBody)
 
-	if containsProjectID(listBody.Projects, seedProjectID) {
+	if containsProjectID(listBody.Items, seedProjectID) {
 		t.Fatalf("did not expect project %s to be visible to outsider", seedProjectID)
 	}
 

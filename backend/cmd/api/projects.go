@@ -92,7 +92,7 @@ func (app *application) listProjectsHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	response.JSON(w, http.StatusOK, projects.ListResponse{
-		Projects: projects.ToResponses(projectList),
+		Items: projects.ToResponses(projectList),
 		Meta: &projects.PaginationMeta{
 			Page:  pagination.Page,
 			Limit: pagination.Limit,

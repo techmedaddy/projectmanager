@@ -46,7 +46,7 @@ type PaginationMeta struct {
 
 // ListResponse is the response body for task list endpoints.
 type ListResponse struct {
-	Tasks []Response      `json:"tasks"`
+	Items []Response      `json:"items"`
 	Meta  *PaginationMeta `json:"meta,omitempty"`
 }
 
