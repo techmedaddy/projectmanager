@@ -93,10 +93,10 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-200';
-      case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 'low': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      default: return 'bg-stone-100 text-stone-700 border-stone-200';
+      case 'high': return 'bg-rose-500/20 text-rose-200 border-rose-300/30';
+      case 'medium': return 'bg-amber-500/20 text-amber-200 border-amber-300/30';
+      case 'low': return 'bg-emerald-500/20 text-emerald-200 border-emerald-300/30';
+      default: return 'bg-slate-500/20 text-slate-200 border-slate-300/30';
     }
   };
 
@@ -107,17 +107,17 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
         const Icon = column.icon;
 
         return (
-          <div key={column.id} className="flex-1 min-w-[300px] bg-stone-100/50 rounded-2xl p-4 border border-stone-200/60">
+          <div key={column.id} className="flex-1 min-w-[300px] rounded-2xl p-4 border border-white/10 bg-slate-900/45 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4 px-1">
-              <div className="flex items-center gap-2 text-stone-700 font-medium">
+              <div className="flex items-center gap-2 text-slate-100 font-medium">
                 <Icon className={cn("w-4 h-4", 
-                  column.id === 'todo' ? 'text-stone-400' : 
-                  column.id === 'in_progress' ? 'text-orange-500' : 
-                  'text-emerald-500'
+                  column.id === 'todo' ? 'text-slate-400' : 
+                  column.id === 'in_progress' ? 'text-cyan-300' : 
+                  'text-emerald-300'
                 )} />
                 {column.title}
               </div>
-              <Badge variant="secondary" className="bg-stone-200/50 text-stone-600 hover:bg-stone-200/50">
+              <Badge variant="secondary" className="bg-slate-700/60 text-slate-200 hover:bg-slate-700/60 border border-white/10">
                 {columnTasks.length}
               </Badge>
             </div>
@@ -127,14 +127,14 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                 <div
                   key={task.id}
                   onClick={() => onTaskClick(task)}
-                  className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-stone-300 transition-all cursor-pointer group"
+                  className="bg-slate-800/70 p-4 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-cyan-300/30 transition-all cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="font-medium text-stone-900 leading-tight">{task.title}</h4>
+                    <h4 className="font-medium text-slate-100 leading-tight">{task.title}</h4>
                   </div>
                   
                   {task.description && (
-                    <p className="text-sm text-stone-500 line-clamp-2 mb-4">
+                    <p className="text-sm text-slate-300 line-clamp-2 mb-4">
                       {task.description}
                     </p>
                   )}
@@ -145,7 +145,7 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                         {task.priority}
                       </Badge>
                       {task.due_date && (
-                        <div className="flex items-center text-xs text-stone-400">
+                        <div className="flex items-center text-xs text-slate-400">
                           <Calendar className="w-3 h-3 mr-1" />
                           {format(new Date(task.due_date), 'MMM d')}
                         </div>
@@ -157,7 +157,7 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                       {column.id !== 'todo' && (
                         <button 
                           onClick={(e) => handleStatusChange(e, task.id, 'todo')}
-                          className="p-1 text-stone-400 hover:text-stone-600 rounded hover:bg-stone-100"
+                          className="p-1 text-slate-400 hover:text-slate-200 rounded hover:bg-white/10"
                           title="Move to To Do"
                         >
                           <Circle className="w-4 h-4" />
@@ -166,7 +166,7 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                       {column.id !== 'in_progress' && (
                         <button 
                           onClick={(e) => handleStatusChange(e, task.id, 'in_progress')}
-                          className="p-1 text-stone-400 hover:text-orange-500 rounded hover:bg-orange-50"
+                          className="p-1 text-slate-400 hover:text-cyan-300 rounded hover:bg-cyan-500/10"
                           title="Move to In Progress"
                         >
                           <ArrowRightCircle className="w-4 h-4" />
@@ -175,7 +175,7 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
                       {column.id !== 'done' && (
                         <button 
                           onClick={(e) => handleStatusChange(e, task.id, 'done')}
-                          className="p-1 text-stone-400 hover:text-emerald-500 rounded hover:bg-emerald-50"
+                          className="p-1 text-slate-400 hover:text-emerald-300 rounded hover:bg-emerald-500/10"
                           title="Move to Done"
                         >
                           <CheckCircle2 className="w-4 h-4" />
@@ -187,8 +187,8 @@ export function TaskBoard({ tasks, projectId, onTaskClick }: TaskBoardProps) {
               ))}
               
               {columnTasks.length === 0 && (
-                <div className="text-center py-8 border-2 border-dashed border-stone-200 rounded-xl">
-                  <p className="text-sm text-stone-400">No tasks</p>
+                <div className="text-center py-8 border-2 border-dashed border-white/15 rounded-xl">
+                  <p className="text-sm text-slate-400">No tasks</p>
                 </div>
               )}
             </div>

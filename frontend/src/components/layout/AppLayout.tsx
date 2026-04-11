@@ -13,21 +13,26 @@ export function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col text-stone-900 font-sans">
-      <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-white/70 backdrop-blur-xl shadow-[0_1px_0_rgba(28,25,23,0.04)]">
+    <div className="min-h-screen flex flex-col text-slate-100 font-sans bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-900/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 text-stone-900 hover:opacity-85 transition-opacity">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-orange-200/80 bg-orange-50 shadow-sm">
-              <CheckCircle2 className="w-4.5 h-4.5 text-orange-600" />
+          <Link to="/" className="flex items-center gap-2.5 text-white hover:opacity-90 transition-opacity">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/10 shadow-[0_0_24px_rgba(34,211,238,0.2)]">
+              <CheckCircle2 className="w-5 h-5 text-cyan-300" />
             </span>
             <span className="font-semibold text-lg tracking-tight">projectmanager</span>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <span className="text-sm font-medium text-stone-600 hidden sm:inline-block">
+            <span className="text-sm font-medium text-slate-200/90 hidden sm:inline-block rounded-full border border-white/15 bg-white/5 px-3 py-1">
               {user?.name}
             </span>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-stone-500 hover:text-stone-900 hover:bg-stone-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-slate-200 hover:text-white hover:bg-white/10"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -36,9 +41,7 @@ export function AppLayout() {
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="rounded-3xl border border-stone-200/70 bg-white/75 p-4 sm:p-6 lg:p-8 shadow-[0_10px_35px_rgba(28,25,23,0.06)] backdrop-blur-sm">
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
     </div>
   );

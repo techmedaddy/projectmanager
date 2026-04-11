@@ -39,7 +39,7 @@ export function Register() {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      
+
       toast.success('Account created successfully. Please sign in.');
       navigate('/login');
     } catch (error) {
@@ -60,59 +60,59 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 bg-white/95 rounded-2xl shadow-sm border border-stone-200 flex items-center justify-center mb-6">
-            <CheckCircle2 className="w-6 h-6 text-orange-600" />
+          <div className="w-14 h-14 rounded-2xl border border-cyan-300/40 bg-cyan-500/10 shadow-[0_0_26px_rgba(34,211,238,0.25)] flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-7 h-7 text-cyan-300" />
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Create an account</h1>
-          <p className="text-stone-500 mt-2">Get started with projectmanager today.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Create an account</h1>
+          <p className="text-slate-300 mt-2">Get started with projectmanager today.</p>
         </div>
 
-        <Card className="border-stone-200/80 bg-white/95 rounded-2xl shadow-lg shadow-stone-900/5">
+        <Card className="border-white/10 bg-slate-900/65 backdrop-blur-sm shadow-2xl shadow-black/30">
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name" className="text-slate-200">Full Name</Label>
                 <Input
                   id="name"
                   placeholder="Jane Doe"
                   {...register('name')}
-                  className={errors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  className={errors.name ? 'border-rose-500 focus-visible:ring-rose-500' : 'bg-slate-800/80 border-white/15 text-slate-100'}
                 />
-                {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
+                {errors.name && <p className="text-sm text-rose-400">{errors.name.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-slate-200">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="name@example.com"
                   {...register('email')}
-                  className={errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  className={errors.email ? 'border-rose-500 focus-visible:ring-rose-500' : 'bg-slate-800/80 border-white/15 text-slate-100'}
                 />
-                {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+                {errors.email && <p className="text-sm text-rose-400">{errors.email.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-slate-200">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   {...register('password')}
-                  className={errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  className={errors.password ? 'border-rose-500 focus-visible:ring-rose-500' : 'bg-slate-800/80 border-white/15 text-slate-100'}
                 />
-                {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+                {errors.password && <p className="text-sm text-rose-400">{errors.password.message}</p>}
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full bg-stone-900 hover:bg-stone-800 text-white" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-cyan-400 hover:bg-cyan-300 text-slate-950" disabled={isLoading}>
                 {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Create account
               </Button>
-              <div className="text-sm text-center text-stone-500">
+              <div className="text-sm text-center text-slate-300">
                 Already have an account?{' '}
-                <Link to="/login" className="text-stone-900 font-medium hover:underline">
+                <Link to="/login" className="text-cyan-300 font-medium hover:text-cyan-200 hover:underline">
                   Sign in
                 </Link>
               </div>
