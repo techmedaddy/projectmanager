@@ -43,8 +43,8 @@ projectmanager is a full-stack project and task management platform with a Go AP
 ### Tradeoffs
 
 - I chose clarity over abstraction, so there is some repetition across handlers and DTOs.
-- Seed data is documented and explicit, but not applied automatically on startup.
-- Pagination helpers exist, but list endpoints currently return full result sets because typical local/demo datasets are small.
+- Startup seeding is intentionally optimized for local/dev convenience and should be disabled in production unless explicitly desired.
+- Pagination support is intentionally minimal (page/limit + next/prev controls) without advanced sorting UI controls.
 
 ## System Design
 
@@ -296,12 +296,13 @@ psql "$DATABASE_URL" -f backend/seed/001_seed.sql
 ### Task modal behavior
 
 - Create and edit use the same modal.
-- Fields: `title`, `description`, `status`, `priority`, `due_date`, `assignee_id`.
+- Fields: `title`, `description`, `status`, `priority`, `due_date`, `assignee`.
+- Assignee now uses a dropdown sourced from `GET /projects/:id/assignees`.
 - Assignee supports set and clear:
-  - setting sends UUID string
-  - clearing sends `"assignee_id": null`
+  - selecting a user sends that UUID in `assignee_id`
+  - selecting **Unassigned** sends `"assignee_id": null`
 - Nullable date clear sends `"due_date": null`.
-- Inline validation is shown for invalid assignee UUID format.
+- API field errors are mapped to inline form validation.
 
 ## Frontend API Usage Notes
 
@@ -420,13 +421,23 @@ Response `200 OK`:
 
 #### `GET /projects`
 
-Returns projects the current user owns or currently has assigned tasks in.
+Returns projects the current user can access (project owner OR task creator OR task assignee).
+
+Supports pagination:
+- `page` (default `1`)
+- `limit` (default `20`)
+
+Example:
+
+```http
+GET /projects?page=2&limit=6
+```
 
 Response `200 OK`:
 
 ```json
 {
-  "projects": [
+  "items": [
     {
       "id": "22222222-2222-2222-2222-222222222222",
       "name": "projectmanager Launch",
@@ -434,7 +445,12 @@ Response `200 OK`:
       "owner_id": "11111111-1111-1111-1111-111111111111",
       "created_at": "2026-04-10T15:11:09Z"
     }
-  ]
+  ],
+  "meta": {
+    "page": 2,
+    "limit": 6,
+    "total": 12
+  }
 }
 ```
 
@@ -463,7 +479,7 @@ Response `201 Created`:
 
 #### `GET /projects/:id`
 
-Returns project detail plus its tasks.
+Returns project detail plus its tasks. Access policy matches list visibility (owner OR task creator OR task assignee).
 
 Response `200 OK`:
 
@@ -515,20 +531,50 @@ Owner only.
 
 Response `204 No Content`
 
-### Tasks
+#### `GET /projects/:id/stats`
 
-#### `GET /projects/:id/tasks`
-
-Supports:
-
-- `?status=todo|in_progress|done`
-- `?assignee=<user-uuid>`
+Returns aggregate stats for the project:
+- task counts by status
+- task counts grouped by assignee (`"unassigned"` bucket included)
 
 Response `200 OK`:
 
 ```json
 {
-  "tasks": [
+  "by_status": {
+    "todo": 4,
+    "in_progress": 2,
+    "done": 1
+  },
+  "by_assignee": {
+    "11111111-1111-1111-1111-111111111111": 3,
+    "unassigned": 4
+  }
+}
+```
+
+### Tasks
+
+#### `GET /projects/:id/tasks`
+
+Supports filters + pagination:
+
+- `status=todo|in_progress|done`
+- `assignee=<user-uuid>`
+- `page=<n>`
+- `limit=<n>`
+
+Example:
+
+```http
+GET /projects/22222222-2222-2222-2222-222222222222/tasks?status=todo&assignee=11111111-1111-1111-1111-111111111111&page=1&limit=5
+```
+
+Response `200 OK`:
+
+```json
+{
+  "items": [
     {
       "id": "33333333-3333-3333-3333-333333333333",
       "title": "Set up API foundation",
@@ -541,6 +587,29 @@ Response `200 OK`:
       "due_date": "2026-04-15",
       "created_at": "2026-04-10T15:11:09Z",
       "updated_at": "2026-04-10T15:11:09Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 5,
+    "total": 7
+  }
+}
+```
+
+#### `GET /projects/:id/assignees`
+
+Returns users eligible for assignment in the project context.
+
+Response `200 OK`:
+
+```json
+{
+  "users": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Test User",
+      "email": "test@example.com"
     }
   ]
 }
@@ -615,16 +684,16 @@ Response `204 No Content`
 Project visibility rules:
 
 - project owners can list, read, update, and delete their own projects
-- non-owners can list and read a project only when they currently have at least one assigned task in that project
+- non-owners can list/read a project when they are involved in at least one task in that project (task creator or task assignee)
 - non-owners cannot update or delete projects
 
 Task rules:
 
-- listing and creating tasks requires access to the parent project
-- updating a task requires project visibility plus task-level permission
+- listing and creating tasks requires project visibility
+- updating a task requires project visibility plus task-level permission checks
 - deleting a task is allowed only for the project owner or the task creator
 
-This keeps `401` reserved for missing or invalid authentication, while `403` is used for authenticated users attempting an action they are not allowed to perform.
+This keeps `401` reserved for missing/invalid authentication, while `403` is used for authenticated users attempting actions they are not allowed to perform.
 
 ## Testing
 
@@ -652,10 +721,8 @@ The test harness:
 
 ## What I’d Do With More Time
 
-- Add automatic seed loading on first Docker startup (idempotent) for zero-step reviewer login.
-- Replace assignee UUID text input with searchable user picker backed by a dedicated users/assignees endpoint.
-- Add pagination + sorting for projects and tasks to improve performance on larger datasets.
-- Add the bonus `GET /projects/:id/stats` endpoint and surface it in project detail UI.
+- Add richer assignee UX (searchable dropdown + avatars).
+- Add page-size controls and explicit page-number jump UI.
 - Add OpenAPI and a checked-in API collection (Bruno/Postman) for faster API review.
-- Add CI pipeline for backend tests + frontend lint/build + end-to-end smoke test in containers.
+- Add CI pipeline for backend tests + frontend lint/build + end-to-end smoke tests in containers.
 - Improve auditability/observability (structured request correlation for auth + permission denials).
