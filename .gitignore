@@ -8,3 +8,7 @@ BASELINE_RUN_REPORT.md
 QA_MATRIX_PHASE5_1.md
 QA_MATRIX_PHASE5_2.md
 QA_MATRIX_PHASE5_3.md
+
+# Ignore root-level markdown docs except README
+/*.md
+!/README.md
