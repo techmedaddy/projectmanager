@@ -435,7 +435,7 @@ func newIntegrationExecPool(ctx context.Context, databaseURL string) (*pgxpool.P
 }
 
 func resetIntegrationSchema(ctx context.Context, pool *pgxpool.Pool) error {
-	downFiles, err := sqlFiles("migrations", "*_down.sql")
+	downFiles, err := sqlFiles("migrations", "*.down.sql")
 	if err != nil {
 		return err
 	}
@@ -447,7 +447,7 @@ func resetIntegrationSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 	}
 
-	upFiles, err := sqlFiles("migrations", "*_up.sql")
+	upFiles, err := sqlFiles("migrations", "*.up.sql")
 	if err != nil {
 		return err
 	}
