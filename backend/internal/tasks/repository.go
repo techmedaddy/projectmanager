@@ -69,6 +69,7 @@ type UpdateParams struct {
 type ListFilters struct {
 	Status     *Status
 	AssigneeID *string
+	Pagination db.Pagination
 }
 
 // Repository provides explicit task queries backed by PostgreSQL.
@@ -175,6 +176,8 @@ func (r *Repository) ListByProject(ctx context.Context, projectID string, filter
 		parts = append(parts, fmt.Sprintf("assignee_id = $%d", len(args)))
 	}
 
+	normalized := filters.Pagination.Normalize()
+	args = append(args, normalized.Limit, normalized.Offset())
 	query := fmt.Sprintf(`
 		SELECT
 			id::text,
@@ -190,8 +193,9 @@ func (r *Repository) ListByProject(ctx context.Context, projectID string, filter
 			updated_at
 		FROM tasks
 		WHERE %s
-		ORDER BY created_at DESC
-	`, strings.Join(parts, " AND "))
+		ORDER BY created_at DESC, id DESC
+		LIMIT $%d OFFSET $%d
+	`, strings.Join(parts, " AND "), len(args)-1, len(args))
 
 	rows, err := r.q.Query(ctx, query, args...)
 	if err != nil {
@@ -213,6 +217,38 @@ func (r *Repository) ListByProject(ctx context.Context, projectID string, filter
 	}
 
 	return tasks, nil
+}
+
+// CountByProject returns task count for a project with optional status and
+// assignee filters.
+func (r *Repository) CountByProject(ctx context.Context, projectID string, filters ListFilters) (int, error) {
+	var (
+		args  = []any{projectID}
+		parts = []string{"project_id = $1"}
+	)
+
+	if filters.Status != nil {
+		args = append(args, *filters.Status)
+		parts = append(parts, fmt.Sprintf("status = $%d", len(args)))
+	}
+
+	if filters.AssigneeID != nil {
+		args = append(args, *filters.AssigneeID)
+		parts = append(parts, fmt.Sprintf("assignee_id = $%d", len(args)))
+	}
+
+	query := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM tasks
+		WHERE %s
+	`, strings.Join(parts, " AND "))
+
+	var total int
+	if err := r.q.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count tasks by project: %w", err)
+	}
+
+	return total, nil
 }
 
 // Update persists a full task update and returns the stored row.

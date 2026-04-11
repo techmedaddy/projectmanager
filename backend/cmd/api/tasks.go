@@ -62,18 +62,16 @@ func (app *application) listTasksHandler(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	projectTasks, err := app.tasksService.ListByProject(r.Context(), projectID, currentUser.ID, filters)
+	filters.Pagination = pagination
+
+	projectTasks, total, err := app.tasksService.ListByProject(r.Context(), projectID, currentUser.ID, filters)
 	if err != nil {
 		app.handleTaskServiceError(w, r, err, "list tasks failed")
 		return
 	}
 
-	total := len(projectTasks)
-	start, end := paginateBounds(total, pagination)
-	pagedTasks := projectTasks[start:end]
-
 	response.JSON(w, http.StatusOK, tasks.ListResponse{
-		Tasks: tasks.ToResponses(pagedTasks),
+		Tasks: tasks.ToResponses(projectTasks),
 		Meta: &tasks.PaginationMeta{
 			Page:  pagination.Page,
 			Limit: pagination.Limit,

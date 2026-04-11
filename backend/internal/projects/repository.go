@@ -102,18 +102,24 @@ func (r *Repository) GetOwnerID(ctx context.Context, id string) (string, error) 
 
 // ListAccessibleByUser returns projects the user can see:
 // owner OR involved-in-task (creator or assignee).
-func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([]Project, error) {
+func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string, pagination db.Pagination) ([]Project, error) {
+	normalized := pagination.Normalize()
 	const query = `
-		SELECT DISTINCT p.id::text, p.name, p.description, p.owner_id::text, p.created_at
+		SELECT p.id::text, p.name, p.description, p.owner_id::text, p.created_at
 		FROM projects p
-		LEFT JOIN tasks t ON t.project_id = p.id
-		WHERE p.owner_id = $1
-		   OR t.assignee_id = $1
-		   OR t.creator_id = $1
-		ORDER BY p.created_at DESC
+		WHERE p.id IN (
+			SELECT p2.id
+			FROM projects p2
+			LEFT JOIN tasks t ON t.project_id = p2.id
+			WHERE p2.owner_id = $1
+			   OR t.assignee_id = $1
+			   OR t.creator_id = $1
+		)
+		ORDER BY p.created_at DESC, p.id DESC
+		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.q.Query(ctx, query, userID)
+	rows, err := r.q.Query(ctx, query, userID, normalized.Limit, normalized.Offset())
 	if err != nil {
 		return nil, fmt.Errorf("list accessible projects: %w", err)
 	}
@@ -133,6 +139,26 @@ func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([
 	}
 
 	return projects, nil
+}
+
+// CountAccessibleByUser returns the total number of projects visible to the
+// user, without pagination.
+func (r *Repository) CountAccessibleByUser(ctx context.Context, userID string) (int, error) {
+	const query = `
+		SELECT COUNT(DISTINCT p.id)
+		FROM projects p
+		LEFT JOIN tasks t ON t.project_id = p.id
+		WHERE p.owner_id = $1
+		   OR t.assignee_id = $1
+		   OR t.creator_id = $1
+	`
+
+	var total int
+	if err := r.q.QueryRow(ctx, query, userID).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count accessible projects: %w", err)
+	}
+
+	return total, nil
 }
 
 // HasTaskInvolvement reports whether the user is involved in at least one task

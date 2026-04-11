@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"taskflow/backend/internal/db"
 	"taskflow/backend/internal/tasks"
 )
 
@@ -22,7 +23,8 @@ var (
 type projectRepository interface {
 	Create(ctx context.Context, params CreateParams) (Project, error)
 	GetByID(ctx context.Context, id string) (Project, error)
-	ListAccessibleByUser(ctx context.Context, userID string) ([]Project, error)
+	ListAccessibleByUser(ctx context.Context, userID string, pagination db.Pagination) ([]Project, error)
+	CountAccessibleByUser(ctx context.Context, userID string) (int, error)
 	Update(ctx context.Context, params UpdateParams) (Project, error)
 	Delete(ctx context.Context, id string) error
 	HasTaskInvolvement(ctx context.Context, projectID, userID string) (bool, error)
@@ -54,13 +56,18 @@ func NewService(projectsRepo projectRepository, tasksRepo taskRepository) *Servi
 // ListAccessible returns projects visible to the current user.
 //
 // Visibility means owner OR involved-in-task (creator or assignee).
-func (s *Service) ListAccessible(ctx context.Context, userID string) ([]Project, error) {
-	projects, err := s.projectsRepo.ListAccessibleByUser(ctx, userID)
+func (s *Service) ListAccessible(ctx context.Context, userID string, pagination db.Pagination) ([]Project, int, error) {
+	projects, err := s.projectsRepo.ListAccessibleByUser(ctx, userID, pagination)
 	if err != nil {
-		return nil, fmt.Errorf("list accessible projects: %w", err)
+		return nil, 0, fmt.Errorf("list accessible projects: %w", err)
 	}
 
-	return projects, nil
+	total, err := s.projectsRepo.CountAccessibleByUser(ctx, userID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count accessible projects: %w", err)
+	}
+
+	return projects, total, nil
 }
 
 // Create creates a new project owned by the current user.

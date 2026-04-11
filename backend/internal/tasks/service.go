@@ -31,6 +31,7 @@ type taskRepository interface {
 	Create(ctx context.Context, params CreateParams) (Task, error)
 	GetByID(ctx context.Context, id string) (Task, error)
 	ListByProject(ctx context.Context, projectID string, filters ListFilters) ([]Task, error)
+	CountByProject(ctx context.Context, projectID string, filters ListFilters) (int, error)
 	Update(ctx context.Context, params UpdateParams) (Task, error)
 	Delete(ctx context.Context, id string) error
 }
@@ -82,17 +83,22 @@ func NewService(tasksRepo taskRepository, projectsRepo projectRepository, usersR
 
 // ListByProject returns tasks in a project when the current user can access the
 // project.
-func (s *Service) ListByProject(ctx context.Context, projectID, userID string, filters ListFilters) ([]Task, error) {
+func (s *Service) ListByProject(ctx context.Context, projectID, userID string, filters ListFilters) ([]Task, int, error) {
 	if _, err := s.authorizeProjectAccess(ctx, projectID, userID); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	projectTasks, err := s.tasksRepo.ListByProject(ctx, projectID, filters)
 	if err != nil {
-		return nil, fmt.Errorf("list tasks by project: %w", err)
+		return nil, 0, fmt.Errorf("list tasks by project: %w", err)
 	}
 
-	return projectTasks, nil
+	total, err := s.tasksRepo.CountByProject(ctx, projectID, filters)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count tasks by project: %w", err)
+	}
+
+	return projectTasks, total, nil
 }
 
 // Create creates a task inside a project and records the current user as the
