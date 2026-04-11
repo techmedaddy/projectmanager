@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchApi } from '../../lib/api';
+import { ApiError, fetchApi } from '../../lib/api';
 import { Task, TaskStatus, TaskPriority, AssigneesResponse } from '../../types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -19,7 +19,11 @@ const taskSchema = z.object({
   status: z.enum(['todo', 'in_progress', 'done']),
   priority: z.enum(['low', 'medium', 'high']),
   due_date: z.string().nullable().optional(),
-  assignee_id: z.string().nullable().optional(),
+  assignee_id: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((value) => value == null || z.string().uuid().safeParse(value).success, 'Assignee must be a valid user'),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -35,7 +39,7 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
   const queryClient = useQueryClient();
   const isEditing = !!task;
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<TaskFormValues>({
+  const { register, handleSubmit, reset, setValue, watch, setError, clearErrors, formState: { errors } } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: '',
@@ -87,7 +91,7 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
     mutationFn: (data: TaskFormValues) => {
       const payload = {
         ...data,
-        assignee_id: data.assignee_id ?? null,
+        assignee_id: data.assignee_id && data.assignee_id.trim() !== '' ? data.assignee_id : null,
         due_date: data.due_date ?? null,
       };
 
@@ -104,12 +108,18 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
       }
     },
     onSuccess: () => {
+      clearErrors();
       queryClient.invalidateQueries({ queryKey: ['project-detail', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       toast.success(isEditing ? 'Task updated' : 'Task created');
       onClose();
     },
-    onError: () => {
+    onError: (error) => {
+      if (error instanceof ApiError && error.fields) {
+        Object.entries(error.fields).forEach(([field, message]) => {
+          setError(field as keyof TaskFormValues, { message });
+        });
+      }
       toast.error(isEditing ? 'Failed to update task' : 'Failed to create task');
     },
   });
@@ -206,6 +216,7 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
               value={watch('assignee_id') ?? 'unassigned'}
               onChange={(event) => {
                 const value = event.target.value;
+                clearErrors('assignee_id');
                 setValue('assignee_id', value === 'unassigned' ? null : value, { shouldValidate: true, shouldDirty: true });
               }}
               className="flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-300"
@@ -218,7 +229,9 @@ export function TaskModal({ isOpen, onClose, projectId, task }: TaskModalProps) 
                 </option>
               ))}
             </select>
-            {assigneesError ? (
+            {errors.assignee_id ? (
+              <p className="text-sm text-red-500">{errors.assignee_id.message}</p>
+            ) : assigneesError ? (
               <p className="text-sm text-amber-600">Could not load assignee options. You can still save as Unassigned.</p>
             ) : !isAssigneesLoading && assigneeOptions.length === 0 ? (
               <p className="text-xs text-stone-500">No assignee options found for this project yet. New tasks can remain Unassigned.</p>
