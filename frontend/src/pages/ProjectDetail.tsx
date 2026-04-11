@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { fetchApi } from '../lib/api';
+import { ApiError, fetchApi } from '../lib/api';
 import { ProjectDetailResponse, Task, TaskStatus, TasksResponse } from '../types';
 import { Button } from '../components/ui/button';
 import { Loader2, ArrowLeft, Plus } from 'lucide-react';
@@ -79,9 +79,21 @@ export function ProjectDetail() {
   }
 
   if (projectError || !projectData) {
+    const apiError = projectError instanceof ApiError ? projectError : null;
+    const status = apiError?.status;
+    const message =
+      status === 401
+        ? 'Your session expired. Please sign in again.'
+        : status === 403
+          ? 'You do not have access to this project.'
+          : status === 404
+            ? 'Project not found.'
+            : 'Failed to load project details.';
+
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">Failed to load project details.</p>
+        <p className="text-red-500">{message}</p>
+        {status && <p className="text-xs text-stone-500 mt-1">Error code: {status}</p>}
         <Link to="/projects" className="text-stone-500 hover:text-stone-900 mt-4 inline-block">
           &larr; Back to Projects
         </Link>
@@ -168,12 +180,28 @@ export function ProjectDetail() {
             <Loader2 className="h-7 w-7 animate-spin text-stone-400" />
           </div>
         ) : tasksError ? (
+          (() => {
+            const apiError = tasksError instanceof ApiError ? tasksError : null;
+            const status = apiError?.status;
+            const message =
+              status === 401
+                ? 'Your session expired. Please sign in again.'
+                : status === 403
+                  ? 'You do not have access to these tasks.'
+                  : status === 404
+                    ? 'Tasks resource not found for this project.'
+                    : 'Failed to load filtered tasks.';
+
+            return (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <p>Failed to load filtered tasks.</p>
+            <p>{message}</p>
+            {status && <p className="text-xs text-red-600 mt-1">Error code: {status}</p>}
             <Button variant="outline" className="mt-3" onClick={() => void refetchTasks()}>
               Retry
             </Button>
           </div>
+            );
+          })()
         ) : hasActiveFilters && tasks.length === 0 ? (
           <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center">
             <p className="text-base font-medium text-stone-800">No tasks match current filters</p>

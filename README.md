@@ -50,15 +50,28 @@ TaskFlow is a small task management backend built for the take-home assignment i
 
 ### Docker
 
+From clone to browser (full stack):
+
 ```bash
+git clone https://github.com/<your-username>/projectmanager.git
+cd projectmanager
 cp .env.example .env
 docker compose up --build
 ```
 
+`docker compose up --build` also works without creating `.env` because compose defaults are defined, but copying `.env.example` is recommended for explicit local config.
+
 Services:
 
+- Frontend: `http://localhost:3001`
 - API: `http://localhost:8080`
 - PostgreSQL: `localhost:5432`
+
+Open the app in your browser at `http://localhost:3001`.
+
+Backend health endpoint:
+
+- `GET http://localhost:8080/health`
 
 Health check:
 
@@ -97,6 +110,8 @@ Copy [`.env.example`](/home/techmedaddy/projects/projectmanager/.env.example) to
 | `POSTGRES_PASSWORD` | Compose database password | `postgres` |
 | `POSTGRES_PORT` | Host port mapped to PostgreSQL | `5432` |
 | `APP_PORT` | Host port mapped to the API | `8080` |
+| `FRONTEND_PORT` | Host port mapped to frontend container | `3001` |
+| `VITE_API_BASE_URL` | API base URL injected into frontend build | `http://localhost:8080` |
 | `JWT_SECRET` | JWT signing secret | `change-this-secret-before-production` |
 | `JWT_EXPIRY_HOURS` | Token lifetime in hours | `24` |
 | `BCRYPT_COST` | Password hashing cost | `12` |
@@ -116,6 +131,11 @@ Copy [`backend/.env.example`](/home/techmedaddy/projects/projectmanager/backend/
 
 ## Migration Strategy
 
+Auto-run status: **Enabled**.
+
+- Migrations are automatically executed by the API on startup.
+- No manual migration command is required for normal Docker startup.
+
 - Schema changes live in [`backend/migrations`](/home/techmedaddy/projects/projectmanager/backend/migrations).
 - Migrations are plain SQL with both `up` and `down` files.
 - The API embeds those SQL files into the binary and runs pending migrations automatically on startup.
@@ -131,12 +151,14 @@ Relevant files:
 
 Seed SQL lives in [`backend/seed/001_seed.sql`](/home/techmedaddy/projects/projectmanager/backend/seed/001_seed.sql).
 
-Known seed credentials:
+## Test Credentials
+
+Use these credentials after seeding:
 
 - Email: `test@example.com`
 - Password: `password123`
 
-Seed the running Docker database with:
+Seed command (Docker):
 
 ```bash
 cat backend/seed/001_seed.sql | docker compose exec -T postgres psql -U postgres -d taskflow
@@ -147,6 +169,62 @@ If you are running PostgreSQL locally outside Docker:
 ```bash
 psql "$DATABASE_URL" -f backend/seed/001_seed.sql
 ```
+
+## Frontend Behavior
+
+### Pages and routes
+
+- `/login`
+  - Authenticates user and stores JWT in localStorage.
+  - Immediately fetches `GET /auth/me` after login to hydrate navbar user state.
+- `/register`
+  - Registers a new user and redirects to login.
+- `/projects` (protected)
+  - Lists accessible projects.
+  - Supports project creation through modal form.
+- `/projects/:id` (protected)
+  - Shows project header and task board.
+  - Includes task create/edit modal.
+  - Includes status + assignee filter controls with clear/reset action.
+
+### Auth persistence and protected routes
+
+- JWT is persisted in localStorage key `taskflow_token`.
+- On app boot, auth context calls `GET /auth/me` when token exists.
+- Protected routes redirect unauthenticated users to `/login`.
+- Logout clears token and user state.
+
+### Task filters behavior
+
+- Status filter options: `all`, `todo`, `in_progress`, `done`.
+- Assignee filter options: `all` + assignee IDs found in project tasks.
+- Changing filters re-queries tasks from API (not just client-side filtering).
+- Empty filtered result shows an explicit empty state with clear-filters CTA.
+
+### Task modal behavior
+
+- Create and edit use the same modal.
+- Fields: `title`, `description`, `status`, `priority`, `due_date`, `assignee_id`.
+- Assignee supports set and clear:
+  - setting sends UUID string
+  - clearing sends `"assignee_id": null`
+- Nullable date clear sends `"due_date": null`.
+- Inline validation is shown for invalid assignee UUID format.
+
+## Frontend API Usage Notes
+
+- Base URL is configurable via `VITE_API_BASE_URL` (default `http://localhost:8080`).
+- Task filter requests use backend query params exactly as required:
+  - `GET /projects/:id/tasks?status=todo|in_progress|done`
+  - `GET /projects/:id/tasks?assignee=<user-uuid>`
+  - or both together in one request.
+- Auth header handling:
+  - frontend automatically adds `Authorization: Bearer <token>` when token exists.
+- Error handling strategy:
+  - API errors are parsed into `ApiError` with `status`, `message`, and optional `fields`.
+  - field errors are mapped to form validation messages.
+  - non-field errors are shown via toast notifications.
+  - list/detail fetch failures render visible retryable error states.
 
 ## API Reference
 
@@ -482,10 +560,10 @@ The test harness:
 
 ## What I’d Do With More Time
 
-- Add automatic seed loading in Docker for reviewer convenience.
-- Add an OpenAPI spec or Bruno/Postman collection.
-- Add pagination to `GET /projects` and `GET /projects/:id/tasks`.
-- Add the bonus `GET /projects/:id/stats` endpoint.
-- Add CI that runs formatting, build, and integration tests in containers.
-- Add stronger observability around startup, DB retries, and auth failures.
-- Build the React frontend and document the full-stack flow in the same README.
+- Add automatic seed loading on first Docker startup (idempotent) for zero-step reviewer login.
+- Replace assignee UUID text input with searchable user picker backed by a dedicated users/assignees endpoint.
+- Add pagination + sorting for projects and tasks to improve performance on larger datasets.
+- Add the bonus `GET /projects/:id/stats` endpoint and surface it in project detail UI.
+- Add OpenAPI and a checked-in API collection (Bruno/Postman) for faster API review.
+- Add CI pipeline for backend tests + frontend lint/build + end-to-end smoke test in containers.
+- Improve auditability/observability (structured request correlation for auth + permission denials).

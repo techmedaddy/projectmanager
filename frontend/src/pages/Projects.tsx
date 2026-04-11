@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
-import { fetchApi } from '../lib/api';
+import { ApiError, fetchApi } from '../lib/api';
 import { Project, ProjectsResponse } from '../types';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -66,9 +66,22 @@ export function Projects() {
   }
 
   if (error) {
+    const apiError = error instanceof ApiError ? error : null;
+    const status = apiError?.status;
+
+    const message =
+      status === 401
+        ? 'Your session expired. Please sign in again.'
+        : status === 403
+          ? 'You do not have permission to view projects.'
+          : status === 404
+            ? 'Projects resource was not found.'
+            : 'Failed to load projects. Please try again.';
+
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">Failed to load projects. Please try again.</p>
+        <p className="text-red-500">{message}</p>
+        {status && <p className="text-xs text-stone-500 mt-1">Error code: {status}</p>}
       </div>
     );
   }
