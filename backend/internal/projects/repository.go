@@ -94,7 +94,8 @@ func (r *Repository) GetOwnerID(ctx context.Context, id string) (string, error) 
 	return ownerID, nil
 }
 
-// ListAccessibleByUser returns projects the user owns or has assigned tasks in.
+// ListAccessibleByUser returns projects the user can see:
+// owner OR involved-in-task (creator or assignee).
 func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([]Project, error) {
 	const query = `
 		SELECT DISTINCT p.id::text, p.name, p.description, p.owner_id::text, p.created_at
@@ -129,6 +130,9 @@ func (r *Repository) ListAccessibleByUser(ctx context.Context, userID string) ([
 
 // HasAssignedTask reports whether the user has at least one task assigned in
 // the project.
+//
+// Note: this is currently assignee-only and is used by access checks; creator
+// involvement is handled separately from this helper.
 func (r *Repository) HasAssignedTask(ctx context.Context, projectID, userID string) (bool, error) {
 	const query = `
 		SELECT 1

@@ -33,6 +33,9 @@ type taskRepository interface {
 }
 
 // Service contains project business logic and centralizes project access rules.
+//
+// Intended visibility rule:
+// - owner OR involved-in-task (creator or assignee).
 type Service struct {
 	projectsRepo projectRepository
 	tasksRepo    taskRepository
@@ -48,6 +51,8 @@ func NewService(projectsRepo projectRepository, tasksRepo taskRepository) *Servi
 }
 
 // ListAccessible returns projects visible to the current user.
+//
+// Visibility means owner OR involved-in-task (creator or assignee).
 func (s *Service) ListAccessible(ctx context.Context, userID string) ([]Project, error) {
 	projects, err := s.projectsRepo.ListAccessibleByUser(ctx, userID)
 	if err != nil {
@@ -73,6 +78,9 @@ func (s *Service) Create(ctx context.Context, ownerID, name string, description 
 
 // GetDetail returns a project and its tasks when the current user is allowed to
 // access it.
+//
+// Access follows the same visibility intent: owner OR involved-in-task
+// (creator or assignee).
 func (s *Service) GetDetail(ctx context.Context, projectID, userID string) (Project, []tasks.Task, error) {
 	project, err := s.authorizeAccess(ctx, projectID, userID)
 	if err != nil {
@@ -120,6 +128,9 @@ func (s *Service) Delete(ctx context.Context, projectID, userID string) error {
 	return nil
 }
 
+// authorizeAccess enforces project visibility checks.
+//
+// Intended rule: owner OR involved-in-task (creator or assignee).
 func (s *Service) authorizeAccess(ctx context.Context, projectID, userID string) (Project, error) {
 	project, err := s.projectsRepo.GetByID(ctx, projectID)
 	if err != nil {
