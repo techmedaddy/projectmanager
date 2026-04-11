@@ -199,6 +199,7 @@ Copy [`.env.example`](/home/techmedaddy/projects/projectmanager/.env.example) to
 | `JWT_SECRET` | JWT signing secret | `change-this-secret-before-production` |
 | `JWT_EXPIRY_HOURS` | Token lifetime in hours | `24` |
 | `BCRYPT_COST` | Password hashing cost | `12` |
+| `AUTO_SEED` | Auto-run embedded seed SQL at API startup (set `false` in production if you do not want startup seeding) | `true` |
 
 ### Backend env for local Go execution
 
@@ -211,6 +212,7 @@ Copy [`backend/.env.example`](/home/techmedaddy/projects/projectmanager/backend/
 | `JWT_SECRET` | JWT signing secret |
 | `JWT_EXPIRY_HOURS` | Token lifetime in hours |
 | `BCRYPT_COST` | Password hashing cost |
+| `AUTO_SEED` | Auto-run embedded seed SQL at startup |
 | `TEST_DATABASE_URL` | Dedicated database used by integration tests |
 
 ## Migration Strategy
@@ -235,14 +237,20 @@ Relevant files:
 
 Seed SQL lives in [`backend/seed/001_seed.sql`](/home/techmedaddy/projects/projectmanager/backend/seed/001_seed.sql).
 
+By default (`AUTO_SEED=true`), the API now runs an idempotent startup seed check after migrations:
+- if seed user data is missing, it applies embedded seed SQL
+- if already present, it skips seeding safely (`already_seeded`)
+
+For production-safe behavior, set `AUTO_SEED=false` in your environment.
+
 ## Test Credentials
 
-Use these credentials after seeding:
+Use these credentials immediately after a fresh compose startup (with `AUTO_SEED=true`):
 
 - Email: `test@example.com`
 - Password: `password123`
 
-Seed command (Docker):
+Manual fallback seed command (Docker):
 
 ```bash
 cat backend/seed/001_seed.sql | docker compose exec -T postgres psql -U postgres -d projectmanager
